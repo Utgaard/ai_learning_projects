@@ -10,10 +10,12 @@ PLAYER_SPEED = 5
 OBSTACLE_SIZE = (50, 30)
 OBSTACLE_SPEED = 4
 SPAWN_INTERVAL = 1.0
+SCORE_COLOR = "white"
 
 player = Rect((WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2), (PLAYER_SIZE, PLAYER_SIZE))
 obstacles = []
 game_over = False
+score = 0.0
 
 
 def clamp_player():
@@ -36,8 +38,8 @@ def move_obstacles():
     obstacles[:] = [o for o in obstacles if o.top < HEIGHT]
 
 
-def update():
-    global game_over
+def update(dt):
+    global game_over, score
 
     if game_over:
         return
@@ -49,6 +51,7 @@ def update():
     player.y += dy * PLAYER_SPEED
     clamp_player()
     move_obstacles()
+    score += dt
 
     if any(obstacle.colliderect(player) for obstacle in obstacles):
         game_over = True
@@ -59,6 +62,7 @@ def draw():
     screen.draw.filled_rect(player, (200, 200, 255))
     for obstacle in obstacles:
         screen.draw.filled_rect(obstacle, (220, 80, 80))
+    screen.draw.text(f"Score: {int(score)}", topleft=(10, 10), fontsize=36, color=SCORE_COLOR)
     if game_over:
         screen.draw.text("Game Over", center=(WIDTH // 2, HEIGHT // 2), fontsize=64, color="white")
 
