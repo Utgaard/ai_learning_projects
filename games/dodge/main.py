@@ -1,4 +1,6 @@
 import random
+from pathlib import Path
+from pgzero.loaders import set_root
 
 
 WIDTH = 800
@@ -12,6 +14,10 @@ OBSTACLE_SPEED = 4
 SPAWN_INTERVAL = 1.0
 SCORE_COLOR = "white"
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
+PLAYER_IMAGE = "player"
+OBSTACLE_IMAGE = "asteroid"
+ASSET_ROOT = Path(__file__).parent / "assets"
+set_root(ASSET_ROOT)
 
 player = Rect(PLAYER_START, (PLAYER_SIZE, PLAYER_SIZE))
 obstacles = []
@@ -73,9 +79,9 @@ def on_key_down(key):
 
 def draw():
     screen.fill((30, 30, 40))
-    screen.draw.filled_rect(player, (200, 200, 255))
+    screen.blit(PLAYER_IMAGE, player.topleft)
     for obstacle in obstacles:
-        screen.draw.filled_rect(obstacle, (220, 80, 80))
+        screen.blit(OBSTACLE_IMAGE, obstacle.topleft)
     screen.draw.text(f"Score: {int(score)}", topleft=(10, 10), fontsize=36, color=SCORE_COLOR)
     if game_over:
         screen.draw.text("Game Over, Hit R to restart", center=(WIDTH // 2, HEIGHT // 2), fontsize=64, color="white")
