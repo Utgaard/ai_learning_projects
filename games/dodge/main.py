@@ -1,6 +1,4 @@
 import random
-from pathlib import Path
-from pgzero.loaders import set_root
 
 
 WIDTH = 800
@@ -15,9 +13,7 @@ SPAWN_INTERVAL = 1.0
 SCORE_COLOR = "white"
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
-OBSTACLE_IMAGE = "asteroid"
-ASSET_ROOT = Path(__file__).parent / "assets"
-set_root(ASSET_ROOT)
+OBSTACLE_IMAGE = "obstacle"
 
 player = Rect(PLAYER_START, (PLAYER_SIZE, PLAYER_SIZE))
 obstacles = []
