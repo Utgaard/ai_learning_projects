@@ -8,8 +8,11 @@ TITLE = "Dodge MVP"
 PLAYER_SIZE = 50
 PLAYER_SPEED = 5
 OBSTACLE_SIZE = (50, 30)
-OBSTACLE_SPEED = 4
-SPAWN_INTERVAL = 1.0
+BASE_OBSTACLE_SPEED = 4
+BASE_SPAWN_INTERVAL = 1.0
+MIN_SPAWN_INTERVAL = 0.3
+SPEED_RAMP = 0.1
+SPAWN_RAMP = 0.01
 SCORE_COLOR = "white"
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
@@ -19,13 +22,19 @@ player = Rect(PLAYER_START, (PLAYER_SIZE, PLAYER_SIZE))
 obstacles = []
 game_over = False
 score = 0.0
+spawn_timer = 0.0
+current_obstacle_speed = BASE_OBSTACLE_SPEED
+current_spawn_interval = BASE_SPAWN_INTERVAL
 
 
 def reset_game():
-    global game_over, score
+    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval
     player.topleft = PLAYER_START
     obstacles.clear()
     score = 0.0
+    spawn_timer = 0.0
+    current_obstacle_speed = BASE_OBSTACLE_SPEED
+    current_spawn_interval = BASE_SPAWN_INTERVAL
     game_over = False
 
 
@@ -44,13 +53,13 @@ def spawn_obstacle():
 
 def move_obstacles():
     for obstacle in obstacles:
-        obstacle.y += OBSTACLE_SPEED
+        obstacle.y += current_obstacle_speed
     # Keep only obstacles still on screen
     obstacles[:] = [o for o in obstacles if o.top < HEIGHT]
 
 
 def update(dt):
-    global game_over, score
+    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval
 
     if game_over:
         return
@@ -61,8 +70,14 @@ def update(dt):
     player.x += dx * PLAYER_SPEED
     player.y += dy * PLAYER_SPEED
     clamp_player()
-    move_obstacles()
     score += dt
+    current_obstacle_speed = BASE_OBSTACLE_SPEED + score * SPEED_RAMP
+    current_spawn_interval = max(MIN_SPAWN_INTERVAL, BASE_SPAWN_INTERVAL - score * SPAWN_RAMP)
+    spawn_timer += dt
+    while spawn_timer >= current_spawn_interval:
+        spawn_obstacle()
+        spawn_timer -= current_spawn_interval
+    move_obstacles()
 
     if any(obstacle.colliderect(player) for obstacle in obstacles):
         game_over = True
@@ -79,8 +94,6 @@ def draw():
     for obstacle in obstacles:
         screen.blit(OBSTACLE_IMAGE, obstacle.topleft)
     screen.draw.text(f"Score: {int(score)}", topleft=(10, 10), fontsize=36, color=SCORE_COLOR)
+    screen.draw.text(f"Speed: {current_obstacle_speed:.1f}", topright=(WIDTH - 10, 10), fontsize=28, color=SCORE_COLOR)
     if game_over:
         screen.draw.text("Game Over, Hit R to restart", center=(WIDTH // 2, HEIGHT // 2), fontsize=64, color="white")
-
-
-clock.schedule_interval(spawn_obstacle, SPAWN_INTERVAL)
