@@ -13,7 +13,7 @@ SPAWN_INTERVAL = 1.0
 SCORE_COLOR = "white"
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
-OBSTACLE_IMAGE = "obstacle"
+OBSTACLE_IMAGE = "asteroid"
 
 player = Rect(PLAYER_START, (PLAYER_SIZE, PLAYER_SIZE))
 obstacles = []
