@@ -1,9 +1,17 @@
 import random
+from pathlib import Path
+from pgzero.loaders import set_root
 
 
 WIDTH = 800
 HEIGHT = 600
 TITLE = "Dodge MVP"
+ASSET_ROOT = Path(__file__).resolve().parent
+if not (ASSET_ROOT / "music").is_dir():
+    ASSET_ROOT = Path.cwd()
+    if not (ASSET_ROOT / "music").is_dir():
+        ASSET_ROOT = Path.cwd() / "games" / "dodge"
+set_root(ASSET_ROOT)
 
 PLAYER_SIZE = 50
 PLAYER_SPEED = 5
@@ -35,6 +43,7 @@ def start_music():
     global music_playing
     if not music_playing:
         music.play("theme")
+        music.set_volume(0.2)
         music_playing = True
 
 
