@@ -23,6 +23,8 @@ SCORE_COLOR = "white"
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
 OBSTACLE_IMAGE = "asteroid"
+BANK_ANGLE = 15
+BANK_TIME = 1.0
 
 ASSET_ROOT = Path(__file__).resolve().parent
 if not (ASSET_ROOT / "music").is_dir():
@@ -32,6 +34,7 @@ if not (ASSET_ROOT / "music").is_dir():
 set_root(ASSET_ROOT)
 
 player = Rect(PLAYER_START, (PLAYER_SIZE, PLAYER_SIZE))
+player_sprite = Actor(PLAYER_IMAGE, topleft=PLAYER_START)
 obstacles = []
 game_over = False
 score = 0.0
@@ -41,6 +44,7 @@ current_spawn_interval = BASE_SPAWN_INTERVAL
 lives = LIVES_START
 explode_played = False
 music_playing = False
+player_angle = 0.0
 
 
 def start_music():
@@ -59,8 +63,11 @@ def stop_music():
 
 
 def reset_game():
-    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played
+    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played, player_angle
     player.topleft = PLAYER_START
+    player_sprite.topleft = PLAYER_START
+    player_angle = 0.0
+    player_sprite.angle = player_angle
     obstacles.clear()
     score = 0.0
     spawn_timer = 0.0
@@ -103,6 +110,7 @@ def update_player(dx, dy):
     player.x += dx * PLAYER_SPEED
     player.y += dy * PLAYER_SPEED
     clamp_player()
+    player_sprite.topleft = player.topleft
 
 
 def update_difficulty(dt):
@@ -118,6 +126,23 @@ def update_spawning(dt):
     while spawn_timer >= current_spawn_interval:
         spawn_obstacle()
         spawn_timer -= current_spawn_interval
+
+
+def update_bank_angle(dx, dt):
+    global player_angle
+    if dx < 0:
+        target_angle = BANK_ANGLE
+    elif dx > 0:
+        target_angle = -BANK_ANGLE
+    else:
+        target_angle = 0
+    max_step = (BANK_ANGLE / BANK_TIME) * dt
+    delta = target_angle - player_angle
+    if abs(delta) <= max_step:
+        player_angle = target_angle
+    else:
+        player_angle += max_step if delta > 0 else -max_step
+    player_sprite.angle = player_angle
 
 
 def handle_collisions():
@@ -144,6 +169,7 @@ def update(dt):
 
     dx, dy = get_input_vector()
     update_player(dx, dy)
+    update_bank_angle(dx, dt)
     update_difficulty(dt)
     update_spawning(dt)
     move_obstacles()
@@ -157,7 +183,7 @@ def on_key_down(key):
 
 def draw():
     screen.fill((30, 30, 40))
-    screen.blit(PLAYER_IMAGE, player.topleft)
+    player_sprite.draw()
     for obstacle in obstacles:
         screen.blit(OBSTACLE_IMAGE, obstacle.topleft)
     screen.draw.text(f"Score: {int(score)}", topleft=(10, 10), fontsize=36, color=SCORE_COLOR)
