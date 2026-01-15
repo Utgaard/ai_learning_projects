@@ -13,6 +13,7 @@ BASE_SPAWN_INTERVAL = 1.0
 MIN_SPAWN_INTERVAL = 0.3
 SPEED_RAMP = 0.1
 SPAWN_RAMP = 0.01
+LIVES_START = 3
 SCORE_COLOR = "white"
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
@@ -25,16 +26,20 @@ score = 0.0
 spawn_timer = 0.0
 current_obstacle_speed = BASE_OBSTACLE_SPEED
 current_spawn_interval = BASE_SPAWN_INTERVAL
+lives = LIVES_START
+explode_played = False
 
 
 def reset_game():
-    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval
+    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played
     player.topleft = PLAYER_START
     obstacles.clear()
     score = 0.0
     spawn_timer = 0.0
     current_obstacle_speed = BASE_OBSTACLE_SPEED
     current_spawn_interval = BASE_SPAWN_INTERVAL
+    lives = LIVES_START
+    explode_played = False
     game_over = False
 
 
@@ -59,7 +64,7 @@ def move_obstacles():
 
 
 def update(dt):
-    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval
+    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played
 
     if game_over:
         return
@@ -79,8 +84,16 @@ def update(dt):
         spawn_timer -= current_spawn_interval
     move_obstacles()
 
-    if any(obstacle.colliderect(player) for obstacle in obstacles):
-        game_over = True
+    hit_obstacle = next((obstacle for obstacle in obstacles if obstacle.colliderect(player)), None)
+    if hit_obstacle:
+        obstacles.remove(hit_obstacle)
+        lives -= 1
+        sounds.hit.play()
+        if lives <= 0:
+            game_over = True
+            if not explode_played:
+                sounds.explode.play()
+                explode_played = True
 
 
 def on_key_down(key):
@@ -94,6 +107,11 @@ def draw():
     for obstacle in obstacles:
         screen.blit(OBSTACLE_IMAGE, obstacle.topleft)
     screen.draw.text(f"Score: {int(score)}", topleft=(10, 10), fontsize=36, color=SCORE_COLOR)
-    screen.draw.text(f"Speed: {current_obstacle_speed:.1f}", topright=(WIDTH - 10, 10), fontsize=28, color=SCORE_COLOR)
+    screen.draw.text(
+        f"Speed: {current_obstacle_speed:.1f}  Lives: {lives}",
+        topright=(WIDTH - 10, 10),
+        fontsize=28,
+        color=SCORE_COLOR,
+    )
     if game_over:
         screen.draw.text("Game Over, Hit R to restart", center=(WIDTH // 2, HEIGHT // 2), fontsize=64, color="white")
