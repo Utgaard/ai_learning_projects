@@ -28,6 +28,21 @@ current_obstacle_speed = BASE_OBSTACLE_SPEED
 current_spawn_interval = BASE_SPAWN_INTERVAL
 lives = LIVES_START
 explode_played = False
+music_playing = False
+
+
+def start_music():
+    global music_playing
+    if not music_playing:
+        music.play("theme")
+        music_playing = True
+
+
+def stop_music():
+    global music_playing
+    if music_playing:
+        music.stop()
+        music_playing = False
 
 
 def reset_game():
@@ -41,6 +56,8 @@ def reset_game():
     lives = LIVES_START
     explode_played = False
     game_over = False
+    stop_music()
+    start_music()
 
 
 def clamp_player():
@@ -91,6 +108,7 @@ def update(dt):
         sounds.hit.play()
         if lives <= 0:
             game_over = True
+            stop_music()
             if not explode_played:
                 sounds.explode.play()
                 explode_played = True
@@ -115,3 +133,6 @@ def draw():
     )
     if game_over:
         screen.draw.text("Game Over, Hit R to restart", center=(WIDTH // 2, HEIGHT // 2), fontsize=64, color="white")
+
+
+start_music()
