@@ -23,8 +23,9 @@ SCORE_COLOR = "white"
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
 OBSTACLE_IMAGE = "asteroid"
-BANK_ANGLE = 15
-BANK_TIME = 1.0
+BANK_ANGLE = 30
+BANK_TIME = 0.2  # seconds to reach full bank
+OBSTACLE_ROT_SPEED_RANGE = (-120, 120)
 
 ASSET_ROOT = Path(__file__).resolve().parent
 if not (ASSET_ROOT / "music").is_dir():
@@ -90,14 +91,31 @@ def spawn_obstacle():
     if game_over:
         return
     x = random.randint(0, WIDTH - OBSTACLE_SIZE[0])
-    obstacles.append(Rect((x, -OBSTACLE_SIZE[1]), OBSTACLE_SIZE))
+    rect = Rect((x, -OBSTACLE_SIZE[1]), OBSTACLE_SIZE)
+    sprite = Actor(OBSTACLE_IMAGE, topleft=rect.topleft)
+    rotation_speed = random.uniform(OBSTACLE_ROT_SPEED_RANGE[0], OBSTACLE_ROT_SPEED_RANGE[1])
+    obstacles.append(
+        {
+            "rect": rect,
+            "sprite": sprite,
+            "angle": 0.0,
+            "rotation_speed": rotation_speed,
+        }
+    )
 
 
 def move_obstacles():
     for obstacle in obstacles:
-        obstacle.y += current_obstacle_speed
+        obstacle["rect"].y += current_obstacle_speed
+        obstacle["sprite"].topleft = obstacle["rect"].topleft
     # Keep only obstacles still on screen
-    obstacles[:] = [o for o in obstacles if o.top < HEIGHT]
+    obstacles[:] = [o for o in obstacles if o["rect"].top < HEIGHT]
+
+
+def rotate_obstacles(dt):
+    for obstacle in obstacles:
+        obstacle["angle"] = (obstacle["angle"] + obstacle["rotation_speed"] * dt) % 360
+        obstacle["sprite"].angle = obstacle["angle"]
 
 
 def get_input_vector():
@@ -147,7 +165,7 @@ def update_bank_angle(dx, dt):
 
 def handle_collisions():
     global game_over, lives, explode_played
-    hit_obstacle = next((obstacle for obstacle in obstacles if obstacle.colliderect(player)), None)
+    hit_obstacle = next((obstacle for obstacle in obstacles if obstacle["rect"].colliderect(player)), None)
     if not hit_obstacle:
         return
     obstacles.remove(hit_obstacle)
@@ -173,6 +191,7 @@ def update(dt):
     update_difficulty(dt)
     update_spawning(dt)
     move_obstacles()
+    rotate_obstacles(dt)
     handle_collisions()
 
 
@@ -185,7 +204,7 @@ def draw():
     screen.fill((30, 30, 40))
     player_sprite.draw()
     for obstacle in obstacles:
-        screen.blit(OBSTACLE_IMAGE, obstacle.topleft)
+        obstacle["sprite"].draw()
     screen.draw.text(f"Score: {int(score)}", topleft=(10, 10), fontsize=36, color=SCORE_COLOR)
     screen.draw.text(
         f"Speed: {current_obstacle_speed:.1f}  Lives: {lives}",
