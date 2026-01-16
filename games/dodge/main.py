@@ -51,7 +51,6 @@ explode_played = False
 music_playing = False
 player_angle = 0.0
 sparks = []
-sparks_played = False
 
 
 def start_music():
@@ -70,14 +69,13 @@ def stop_music():
 
 
 def reset_game():
-    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played, player_angle, sparks, sparks_played
+    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played, player_angle, sparks
     player.topleft = PLAYER_START
     player_sprite.topleft = PLAYER_START
     player_angle = 0.0
     player_sprite.angle = player_angle
     obstacles.clear()
     sparks.clear()
-    sparks_played = False
     score = 0.0
     spawn_timer = 0.0
     current_obstacle_speed = BASE_OBSTACLE_SPEED
@@ -198,19 +196,17 @@ def update_bank_angle(dx, dt):
 
 
 def handle_collisions():
-    global game_over, lives, explode_played, sparks_played
+    global game_over, lives, explode_played
     hit_obstacle = next((obstacle for obstacle in obstacles if obstacle["rect"].colliderect(player)), None)
     if not hit_obstacle:
         return
     obstacles.remove(hit_obstacle)
+    spawn_sparks(player.center)
     lives -= 1
     sounds.hit.play()
     if lives <= 0:
         game_over = True
         stop_music()
-        if not sparks_played:
-            spawn_sparks(player.center)
-            sparks_played = True
         if not explode_played:
             sounds.explode.play()
             explode_played = True
