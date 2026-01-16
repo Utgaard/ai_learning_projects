@@ -30,7 +30,6 @@ EXHAUST_SPAWN_RATE = 120.0
 EXHAUST_LIFETIME = 0.35
 EXHAUST_SPEED = 140
 EXHAUST_SPREAD = 12
-EXHAUST_OFFSET = 28
 
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
@@ -179,8 +178,8 @@ def spawn_exhaust(dt):
     while exhaust_timer >= spawn_interval:
         exhaust_timer -= spawn_interval
         angle_rad = math.radians(player_angle)
-        back_x = player.centerx - math.sin(angle_rad) * EXHAUST_OFFSET
-        back_y = player.centery + math.cos(angle_rad) * EXHAUST_OFFSET
+        back_x = player.centerx
+        back_y = player.bottom
         jitter_x = random.uniform(-4, 4)
         jitter_y = random.uniform(-4, 4)
         spread = math.radians(random.uniform(-EXHAUST_SPREAD, EXHAUST_SPREAD))
