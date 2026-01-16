@@ -9,7 +9,7 @@ Audience: Internal (Developer / Family Project)
 ## 1. Core Pillars (LOCKED)
 
 ### Game Fantasy
-The player feels like a god, selecting opposing armies and watching fate, physics, the features of the armies and randomness decide the outcome.
+The player feels like a god, selecting opposing armies and watching fate, physics, army traits, and randomness decide the outcome.
 
 ### Target Experience
 - Exciting
@@ -28,8 +28,8 @@ This game explicitly avoids:
 - Competitive or skill-based play
 
 ### Platform & Scope
-- Primary target: Web (HTML5)
-- Secondary target: Windows
+- Primary target: Windows
+- Secondary target: Web
 - Design bias toward simple, fast-to-implement features
 
 ### Player Count
@@ -38,7 +38,7 @@ This game explicitly avoids:
 
 ---
 
-## 2. Match Definition (DRAFT)
+## 2. Match Definition (LOCKED)
 
 > Defines what happens from “Start Battle” to “Battle End”.
 
@@ -48,6 +48,10 @@ This game explicitly avoids:
 - horizontal, left vs right
 - One stationary "base" at either end, where units spawn
 - One lane, ground and air combined. 
+- Camera should show about one "screen" worth of action, scrolling to ensure the middle of the fight is in the centre of the screen at all times
+- the middle of the screen is the point between the foremost units of both siden. 
+- zoomed enough to see both basic small units and large monstrous units fight at the same time. including air units. they fly a few basic unit heights worth of distance above the ground. 
+- zoom is stationary and doesnt change.
 
 ### Armies
 - Each side fields an army defined by:
@@ -58,7 +62,8 @@ This game explicitly avoids:
 ### Escalation
 - Armies unlock stronger unit tiers over time
 - Expected number of tiers: 4
-- Randomizer produce more "power" over time, increasing spawn rate
+- - Over time, the randomizer gains more available "power", allowing stronger units to spawn more frequently and/or increasing overall spawn rate
+
 
 ### Battle Flow
 1. Player selects two armies
@@ -80,6 +85,8 @@ This game explicitly avoids:
 - Symmetric rules but could be changed later
 - Each army has their own randomizer, but they are identical unless otherwise specified. 
 - based on a cool visualization at the top of the screen for each randomizer, that for each determines which units spawn. more powerful units require more "energy" to spawn. 
+- Randomizer visualization is informational only and not interactive
+
 
 ### Combat Resolution
 - Simple physical interactions
@@ -88,6 +95,24 @@ This game explicitly avoids:
 ### Terrain
 - Deformable terrain under consideration
 - Must remain readable and performant
+
+### Matchup Analyzer (Headless Simulation)
+Goal: Allow fast balancing by simulating many battles without visualization and summarizing outcomes.
+
+- Runs N simulations of the current Army A vs Army B setup in "headless" mode (no rendering).
+- Uses the same core simulation rules as the visual game where possible.
+- Supports deterministic runs via RNG seed (reproducible results).
+- Start with a CLI analyzer, integration into in game menu later
+
+Outputs (per matchup):
+- Win rate per side
+- Avg / median time-to-win
+- Avg winner base HP remaining (and distribution buckets)
+- Stomp indicator (e.g., % wins with winner base HP > 70%)
+- Variance / swinginess metrics (time-to-win, base HP remaining)
+
+Notes:
+- Headless mode may optionally enable a simplified "fast mode" for collisions/terrain if needed for performance.
 
 ---
 
@@ -122,10 +147,13 @@ This game explicitly avoids:
 - Terrain deformation performance in web
 - Escalation pacing
 - Visual readability at scale
+- Define what "exciting matchup" means in measurable terms (win-rate band, stomp-rate ceiling, target battle duration).
+- Headless simulation fidelity vs performance tradeoffs (especially terrain deformation).
 
 ---
 
 ## 7. Change Log
+- 2026-01-17: Added headless matchup analyzer for balancing/statistics
 - 2026-01-17: Added more detail
 - 2026-01-16: Created initial GDD
 - 2026-01-16: Locked Core Pillars
