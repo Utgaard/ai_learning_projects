@@ -304,7 +304,7 @@ def update(dt):
     dx, dy = get_input_vector()
     update_player(dx, dy)
     update_bank_angle(dx, dt)
-    spawn_exhaust(dt)
+    #spawn_exhaust(dt)
     update_exhaust(dt)
     update_difficulty(dt)
     update_spawning(dt)
