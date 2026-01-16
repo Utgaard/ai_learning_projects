@@ -1,3 +1,4 @@
+import math
 import random
 from pathlib import Path
 from pgzero.loaders import set_root
@@ -19,6 +20,9 @@ SPAWN_RAMP = 0.04
 
 LIVES_START = 3
 SCORE_COLOR = "white"
+SPARK_COUNT = 20
+SPARK_SPEED = 220
+SPARK_LIFETIME = 0.6
 
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
@@ -46,6 +50,8 @@ lives = LIVES_START
 explode_played = False
 music_playing = False
 player_angle = 0.0
+sparks = []
+sparks_played = False
 
 
 def start_music():
@@ -64,12 +70,14 @@ def stop_music():
 
 
 def reset_game():
-    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played, player_angle
+    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played, player_angle, sparks, sparks_played
     player.topleft = PLAYER_START
     player_sprite.topleft = PLAYER_START
     player_angle = 0.0
     player_sprite.angle = player_angle
     obstacles.clear()
+    sparks.clear()
+    sparks_played = False
     score = 0.0
     spawn_timer = 0.0
     current_obstacle_speed = BASE_OBSTACLE_SPEED
@@ -118,6 +126,32 @@ def rotate_obstacles(dt):
         obstacle["sprite"].angle = obstacle["angle"]
 
 
+def spawn_sparks(position):
+    x, y = position
+    for _ in range(SPARK_COUNT):
+        angle = random.uniform(0, 360)
+        speed = random.uniform(SPARK_SPEED * 0.5, SPARK_SPEED)
+        vx = math.cos(math.radians(angle)) * speed
+        vy = math.sin(math.radians(angle)) * speed
+        sparks.append(
+            {
+                "x": x + random.uniform(-10, 10),
+                "y": y + random.uniform(-10, 10),
+                "vx": vx,
+                "vy": vy,
+                "age": 0.0,
+            }
+        )
+
+
+def update_sparks(dt):
+    for spark in sparks:
+        spark["x"] += spark["vx"] * dt
+        spark["y"] += spark["vy"] * dt
+        spark["age"] += dt
+    sparks[:] = [spark for spark in sparks if spark["age"] < SPARK_LIFETIME]
+
+
 def get_input_vector():
     dx = (1 if keyboard.right else 0) - (1 if keyboard.left else 0)
     dy = (1 if keyboard.down else 0) - (1 if keyboard.up else 0)
@@ -164,7 +198,7 @@ def update_bank_angle(dx, dt):
 
 
 def handle_collisions():
-    global game_over, lives, explode_played
+    global game_over, lives, explode_played, sparks_played
     hit_obstacle = next((obstacle for obstacle in obstacles if obstacle["rect"].colliderect(player)), None)
     if not hit_obstacle:
         return
@@ -174,6 +208,9 @@ def handle_collisions():
     if lives <= 0:
         game_over = True
         stop_music()
+        if not sparks_played:
+            spawn_sparks(player.center)
+            sparks_played = True
         if not explode_played:
             sounds.explode.play()
             explode_played = True
@@ -183,6 +220,7 @@ def update(dt):
     global game_over
 
     if game_over:
+        update_sparks(dt)
         return
 
     dx, dy = get_input_vector()
@@ -193,6 +231,7 @@ def update(dt):
     move_obstacles()
     rotate_obstacles(dt)
     handle_collisions()
+    update_sparks(dt)
 
 
 def on_key_down(key):
@@ -205,6 +244,11 @@ def draw():
     player_sprite.draw()
     for obstacle in obstacles:
         obstacle["sprite"].draw()
+    for spark in sparks:
+        t = max(0.0, 1.0 - (spark["age"] / SPARK_LIFETIME))
+        intensity = int(255 * t)
+        radius = max(1, int(3 * t))
+        screen.draw.filled_circle((spark["x"], spark["y"]), radius, (255, intensity, 0))
     screen.draw.text(f"Score: {int(score)}", topleft=(10, 10), fontsize=36, color=SCORE_COLOR)
     screen.draw.text(
         f"Speed: {current_obstacle_speed:.1f}  Lives: {lives}",
