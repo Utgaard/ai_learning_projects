@@ -26,6 +26,11 @@ SPARK_LIFETIME = 0.6
 GAME_OVER_SPARK_COUNT = 80
 GAME_OVER_SPARK_SPEED = 360
 GAME_OVER_SPARK_LIFETIME = 1.0
+EXHAUST_SPAWN_RATE = 120.0
+EXHAUST_LIFETIME = 0.35
+EXHAUST_SPEED = 140
+EXHAUST_SPREAD = 12
+EXHAUST_OFFSET = 28
 
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
@@ -60,6 +65,8 @@ sparks = []
 player_state = "alive"
 player_spin_speed = 0.0
 player_fall_speed = 0.0
+exhaust_particles = []
+exhaust_timer = 0.0
 
 
 def start_music():
@@ -78,13 +85,15 @@ def stop_music():
 
 
 def reset_game():
-    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played, player_angle, sparks, player_state, player_spin_speed, player_fall_speed
+    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played, player_angle, sparks, player_state, player_spin_speed, player_fall_speed, exhaust_particles, exhaust_timer
     player.topleft = PLAYER_START
     player_sprite.topleft = PLAYER_START
     player_angle = 0.0
     player_sprite.angle = player_angle
     obstacles.clear()
     sparks.clear()
+    exhaust_particles.clear()
+    exhaust_timer = 0.0
     score = 0.0
     spawn_timer = 0.0
     current_obstacle_speed = BASE_OBSTACLE_SPEED
@@ -161,6 +170,39 @@ def update_sparks(dt):
         spark["y"] += spark["vy"] * dt
         spark["age"] += dt
     sparks[:] = [spark for spark in sparks if spark["age"] < spark["lifetime"]]
+
+
+def spawn_exhaust(dt):
+    global exhaust_timer
+    exhaust_timer += dt
+    spawn_interval = 1.0 / EXHAUST_SPAWN_RATE
+    while exhaust_timer >= spawn_interval:
+        exhaust_timer -= spawn_interval
+        angle_rad = math.radians(player_angle)
+        back_x = player.centerx - math.sin(angle_rad) * EXHAUST_OFFSET
+        back_y = player.centery + math.cos(angle_rad) * EXHAUST_OFFSET
+        jitter_x = random.uniform(-4, 4)
+        jitter_y = random.uniform(-4, 4)
+        spread = math.radians(random.uniform(-EXHAUST_SPREAD, EXHAUST_SPREAD))
+        dir_angle = angle_rad + math.pi + spread
+        speed = random.uniform(EXHAUST_SPEED * 0.6, EXHAUST_SPEED)
+        exhaust_particles.append(
+            {
+                "x": back_x + jitter_x,
+                "y": back_y + jitter_y,
+                "vx": math.sin(dir_angle) * speed,
+                "vy": -math.cos(dir_angle) * speed,
+                "age": 0.0,
+            }
+        )
+
+
+def update_exhaust(dt):
+    for particle in exhaust_particles:
+        particle["x"] += particle["vx"] * dt
+        particle["y"] += particle["vy"] * dt
+        particle["age"] += dt
+    exhaust_particles[:] = [p for p in exhaust_particles if p["age"] < EXHAUST_LIFETIME]
 
 
 def get_input_vector():
@@ -263,6 +305,8 @@ def update(dt):
     dx, dy = get_input_vector()
     update_player(dx, dy)
     update_bank_angle(dx, dt)
+    spawn_exhaust(dt)
+    update_exhaust(dt)
     update_difficulty(dt)
     update_spawning(dt)
     move_obstacles()
@@ -287,6 +331,11 @@ def draw():
         intensity = int(255 * t)
         radius = max(1, int(3 * t))
         screen.draw.filled_circle((spark["x"], spark["y"]), radius, (255, intensity, 0))
+    for particle in exhaust_particles:
+        t = max(0.0, 1.0 - (particle["age"] / EXHAUST_LIFETIME))
+        intensity = int(200 * t)
+        radius = max(1, int(2 * t))
+        screen.draw.filled_circle((particle["x"], particle["y"]), radius, (255, 140 + intensity // 2, 0))
     screen.draw.text(f"Score: {int(score)}", topleft=(10, 10), fontsize=36, color=SCORE_COLOR)
     screen.draw.text(
         f"Speed: {current_obstacle_speed:.1f}  Lives: {lives}",
