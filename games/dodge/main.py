@@ -33,6 +33,9 @@ OBSTACLE_IMAGE = "asteroid"
 BANK_ANGLE = 30
 BANK_TIME = 0.2  # seconds to reach full bank
 OBSTACLE_ROT_SPEED_RANGE = (-120, 120)
+DEATH_SPIN_SPEED = 1080
+DEATH_FALL_SPEED = 240
+DEATH_OFFSCREEN_MARGIN = 40
 
 ASSET_ROOT = Path(__file__).resolve().parent
 if not (ASSET_ROOT / "music").is_dir():
@@ -54,6 +57,9 @@ explode_played = False
 music_playing = False
 player_angle = 0.0
 sparks = []
+player_state = "alive"
+player_spin_speed = 0.0
+player_fall_speed = 0.0
 
 
 def start_music():
@@ -72,7 +78,7 @@ def stop_music():
 
 
 def reset_game():
-    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played, player_angle, sparks
+    global game_over, score, spawn_timer, current_obstacle_speed, current_spawn_interval, lives, explode_played, player_angle, sparks, player_state, player_spin_speed, player_fall_speed
     player.topleft = PLAYER_START
     player_sprite.topleft = PLAYER_START
     player_angle = 0.0
@@ -86,6 +92,9 @@ def reset_game():
     lives = LIVES_START
     explode_played = False
     game_over = False
+    player_state = "alive"
+    player_spin_speed = 0.0
+    player_fall_speed = 0.0
     stop_music()
     start_music()
 
@@ -199,8 +208,18 @@ def update_bank_angle(dx, dt):
     player_sprite.angle = player_angle
 
 
+def update_death(dt):
+    global player_angle, player_state
+    player.y += player_fall_speed * dt
+    player_angle = (player_angle + player_spin_speed * dt) % 360
+    player_sprite.angle = player_angle
+    player_sprite.topleft = player.topleft
+    if player.top > HEIGHT + DEATH_OFFSCREEN_MARGIN:
+        player_state = "dead"
+
+
 def handle_collisions():
-    global game_over, lives, explode_played
+    global game_over, lives, explode_played, player_state, player_spin_speed, player_fall_speed
     hit_obstacle = next((obstacle for obstacle in obstacles if obstacle["rect"].colliderect(player)), None)
     if not hit_obstacle:
         return
@@ -211,6 +230,9 @@ def handle_collisions():
     if lives <= 0:
         game_over = True
         stop_music()
+        player_state = "dying"
+        player_spin_speed = DEATH_SPIN_SPEED
+        player_fall_speed = DEATH_FALL_SPEED
         spawn_sparks(
             player.center,
             count=GAME_OVER_SPARK_COUNT,
@@ -225,7 +247,16 @@ def handle_collisions():
 def update(dt):
     global game_over
 
+    if game_over and player_state == "dying":
+        update_death(dt)
+        update_sparks(dt)
+        return
+
     if game_over:
+        update_sparks(dt)
+        return
+
+    if player_state != "alive":
         update_sparks(dt)
         return
 
@@ -247,7 +278,8 @@ def on_key_down(key):
 
 def draw():
     screen.fill((30, 30, 40))
-    player_sprite.draw()
+    if player_state != "dead":
+        player_sprite.draw()
     for obstacle in obstacles:
         obstacle["sprite"].draw()
     for spark in sparks:
