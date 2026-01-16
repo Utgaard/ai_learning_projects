@@ -23,6 +23,9 @@ SCORE_COLOR = "white"
 SPARK_COUNT = 20
 SPARK_SPEED = 220
 SPARK_LIFETIME = 0.6
+GAME_OVER_SPARK_COUNT = 80
+GAME_OVER_SPARK_SPEED = 360
+GAME_OVER_SPARK_LIFETIME = 1.0
 
 PLAYER_START = (WIDTH // 2 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2)
 PLAYER_IMAGE = "player"
@@ -124,13 +127,13 @@ def rotate_obstacles(dt):
         obstacle["sprite"].angle = obstacle["angle"]
 
 
-def spawn_sparks(position):
+def spawn_sparks(position, count=SPARK_COUNT, speed=SPARK_SPEED, lifetime=SPARK_LIFETIME):
     x, y = position
-    for _ in range(SPARK_COUNT):
+    for _ in range(count):
         angle = random.uniform(0, 360)
-        speed = random.uniform(SPARK_SPEED * 0.5, SPARK_SPEED)
-        vx = math.cos(math.radians(angle)) * speed
-        vy = math.sin(math.radians(angle)) * speed
+        spark_speed = random.uniform(speed * 0.5, speed)
+        vx = math.cos(math.radians(angle)) * spark_speed
+        vy = math.sin(math.radians(angle)) * spark_speed
         sparks.append(
             {
                 "x": x + random.uniform(-10, 10),
@@ -138,6 +141,7 @@ def spawn_sparks(position):
                 "vx": vx,
                 "vy": vy,
                 "age": 0.0,
+                "lifetime": lifetime,
             }
         )
 
@@ -147,7 +151,7 @@ def update_sparks(dt):
         spark["x"] += spark["vx"] * dt
         spark["y"] += spark["vy"] * dt
         spark["age"] += dt
-    sparks[:] = [spark for spark in sparks if spark["age"] < SPARK_LIFETIME]
+    sparks[:] = [spark for spark in sparks if spark["age"] < spark["lifetime"]]
 
 
 def get_input_vector():
@@ -207,6 +211,12 @@ def handle_collisions():
     if lives <= 0:
         game_over = True
         stop_music()
+        spawn_sparks(
+            player.center,
+            count=GAME_OVER_SPARK_COUNT,
+            speed=GAME_OVER_SPARK_SPEED,
+            lifetime=GAME_OVER_SPARK_LIFETIME,
+        )
         if not explode_played:
             sounds.explode.play()
             explode_played = True
@@ -241,7 +251,7 @@ def draw():
     for obstacle in obstacles:
         obstacle["sprite"].draw()
     for spark in sparks:
-        t = max(0.0, 1.0 - (spark["age"] / SPARK_LIFETIME))
+        t = max(0.0, 1.0 - (spark["age"] / spark["lifetime"]))
         intensity = int(255 * t)
         radius = max(1, int(3 * t))
         screen.draw.filled_circle((spark["x"], spark["y"]), radius, (255, intensity, 0))
