@@ -58,6 +58,7 @@ This game explicitly avoids:
 ### Escalation
 - Armies unlock stronger unit tiers over time
 - Expected number of tiers: 4
+- Randomizer produce more "power" over time, increasing spawn rate
 
 ### Battle Flow
 1. Player selects two armies
