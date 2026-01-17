@@ -1,5 +1,13 @@
 # Pixel Armies – Agent Contract (for Codex)
 
+## Design authority
+- `pixel-armies/design/GAME_DESIGN.md` is the single source of truth for game behavior and constraints.
+- If a requested change conflicts with the design doc, the agent must:
+  1) Point out the conflict
+  2) Ask for clarification before proceeding
+- If implementation reveals a design gap, propose a minimal doc update.
+
+
 ## Goals
 - Build Pixel Armies in Godot 4 + C#
 - SimCore must be deterministic and runnable headless for analyzer runs
