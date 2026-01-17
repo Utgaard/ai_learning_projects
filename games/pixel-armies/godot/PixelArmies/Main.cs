@@ -1,56 +1,157 @@
+#nullable enable
+
 using Godot;
 using PixelArmies.SimCore;
+using SimSide = PixelArmies.SimCore.Side;
 
-public partial class Main : Node
+
+public partial class Main : Node2D
 {
 	private BattleSimulator? _sim;
+	private SimConfig? _cfg;
+
 	private float _accum;
 	private float _printTimer;
+
+	private Camera2D? _cam;
 
 	public override void _Ready()
 	{
 		GD.Print("Pixel Armies booting...");
 
-		// If launched with --analyze, run headless analyzer and quit.
 		if (TryRunAnalyzerFromArgs())
 		{
 			GetTree().Quit();
 			return;
 		}
 
-		// Otherwise, start a single battle sim (we'll render later)
-		var cfg = new SimConfig();
+		_cfg = new SimConfig();
 
 		var left = DemoArmies.LeftBasic();
 		var right = DemoArmies.RightBasic();
+		_sim = new BattleSimulator(_cfg, left, right, seed: 12345);
 
-		_sim = new BattleSimulator(cfg, left, right, seed: 12345);
-		GD.Print("Started demo battle sim.");
+		// Camera
+		_cam = new Camera2D
+		{
+			Enabled = true,
+			PositionSmoothingEnabled = true,
+			PositionSmoothingSpeed = 6f,
+			Zoom = new Vector2(1.2f, 1.2f), // tweak later
+		};
+		AddChild(_cam);
+
+		GD.Print("Started demo battle sim (visual debug).");
 	}
 
 	public override void _Process(double delta)
 	{
-		if (_sim == null || _sim.State.IsOver) return;
+		if (_sim == null || _cfg == null) return;
 
-		_accum += (float)delta;
-		while (_accum >= SimConfig.FixedDt)
+		if (!_sim.State.IsOver)
 		{
-			_sim.Step(SimConfig.FixedDt);
-			_accum -= SimConfig.FixedDt;
+			_accum += (float)delta;
+			while (_accum >= SimConfig.FixedDt)
+			{
+				_sim.Step(SimConfig.FixedDt);
+				_accum -= SimConfig.FixedDt;
+			}
 		}
 
+		// Debug prints
 		_printTimer += (float)delta;
-		if (_printTimer >= 1.0f)
+		if (_printTimer >= 1.0f && !_sim.State.IsOver)
 		{
 			_printTimer = 0f;
 			GD.Print($"t={_sim.State.Time:0.0}s units={_sim.State.Units.Count} LBase={_sim.State.LeftBaseHp:0} RBase={_sim.State.RightBaseHp:0}");
+		}
+
+		UpdateCamera();
+		QueueRedraw();
+	}
+
+	private void UpdateCamera()
+	{
+		if (_sim == null || _cfg == null || _cam == null) return;
+
+		// Find foremost unit for each side (closest to enemy base)
+		float leftForemost = 0f;
+		float rightForemost = _cfg.BattlefieldLength;
+
+		foreach (var u in _sim.State.Units)
+		{
+			if (!u.Alive) continue;
+
+			if (u.Side == SimSide.Left)
+				leftForemost = Mathf.Max(leftForemost, u.X);
+			else
+				rightForemost = Mathf.Min(rightForemost, u.X);
+		}
+
+		float mid = (leftForemost + rightForemost) * 0.5f;
+
+		// World coordinates: we’ll map x -> pixel x directly for now
+		_cam.Position = new Vector2(mid, 0f);
+	}
+
+	public override void _Draw()
+	{
+		if (_sim == null || _cfg == null) return;
+
+		// Simple coordinate system:
+		// X = sim X
+		// Y = 0 is ground line; units drawn above it
+		float groundY = 120f;
+
+		// Ground
+		DrawLine(new Vector2(0, groundY), new Vector2(_cfg.BattlefieldLength, groundY), Colors.White, 2f);
+
+		// Bases
+		DrawRect(new Rect2(-30, groundY - 60, 30, 60), Colors.White);
+		DrawRect(new Rect2(_cfg.BattlefieldLength, groundY - 60, 30, 60), Colors.White);
+
+		// Base HP bars (simple)
+		float barW = 120f;
+		float barH = 10f;
+		float lPct = Mathf.Clamp(_sim.State.LeftBaseHp / _cfg.BaseMaxHp, 0f, 1f);
+		float rPct = Mathf.Clamp(_sim.State.RightBaseHp / _cfg.BaseMaxHp, 0f, 1f);
+
+		DrawRect(new Rect2(10, groundY + 20, barW, barH), Colors.Black);
+		DrawRect(new Rect2(10, groundY + 20, barW * lPct, barH), Colors.White);
+
+		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, groundY + 20, barW, barH), Colors.Black);
+		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, groundY + 20, barW * rPct, barH), Colors.White);
+
+		// Units as rectangles
+		foreach (var u in _sim.State.Units)
+		{
+			float y = groundY - 12;
+			float h = 12;
+			float w = 10;
+
+			// Make big units bigger (tier proxy)
+			w += (u.Def.Tier - 1) * 4;
+			h += (u.Def.Tier - 1) * 4;
+
+			if (u.Def.IsAir)
+				y -= 40f; // air height
+
+			// Left units slightly different than right
+			var c = u.Side == SimSide.Left ? Colors.Cyan : Colors.Orange;
+
+			DrawRect(new Rect2(u.X - w * 0.5f, y - h, w, h), c);
+		}
+
+		// End text (minimal)
+		if (_sim.State.IsOver)
+		{
+			var winner = _sim.State.Winner == SimSide.Left ? "LEFT WINS" : "RIGHT WINS";
+			DrawString(ThemeDB.FallbackFont, new Vector2(20, 40), winner, fontSize: 32, modulate: Colors.White);
 		}
 	}
 
 	private bool TryRunAnalyzerFromArgs()
 	{
-		// Godot: OS.GetCmdlineArgs() returns args after the executable name.
-		// We'll use: --analyze --runs=1000 --seed=42
 		var args = OS.GetCmdlineArgs();
 
 		bool analyze = false;
@@ -77,38 +178,26 @@ public partial class Main : Node
 	}
 }
 
-// Demo armies live here for now. Later we load these from JSON/data files.
+// Demo armies (same as before, positional args to avoid name issues)
 internal static class DemoArmies
 {
 	public static ArmyDef LeftBasic()
 	{
 		var a = new ArmyDef("Left Basic");
-
-		// Tier 1
-		a.Units.Add(new UnitDef("infantry", Tier: 1, Cost: 6,  MaxHp: 60,  Dps: 12, Range: 25, Speed: 90,  IsAir: false));
-		// Tier 2
-		a.Units.Add(new UnitDef("spearman", Tier: 2, Cost: 12, MaxHp: 100, Dps: 18, Range: 30, Speed: 80,  IsAir: false));
-		// Tier 3
-		a.Units.Add(new UnitDef("archer",  Tier: 3, Cost: 22, MaxHp: 80,  Dps: 22, Range: 140, Speed: 75, IsAir: false));
-		// Tier 4
-		a.Units.Add(new UnitDef("ogre",    Tier: 4, Cost: 40, MaxHp: 380, Dps: 40, Range: 35, Speed: 55,  IsAir: false));
-
+		a.Units.Add(new UnitDef("infantry", 1, 6,  60, 12,  25, 90, false));
+		a.Units.Add(new UnitDef("spearman", 2, 12, 100, 18, 30, 80, false));
+		a.Units.Add(new UnitDef("archer",  3, 22, 80,  22, 140, 75, false));
+		a.Units.Add(new UnitDef("ogre",    4, 40, 380, 40, 35, 55, false));
 		return a;
 	}
 
 	public static ArmyDef RightBasic()
 	{
 		var a = new ArmyDef("Right Basic");
-
-		// Tier 1
-		a.Units.Add(new UnitDef("raider",  Tier: 1, Cost: 6,  MaxHp: 55,  Dps: 13, Range: 25, Speed: 95,  IsAir: false));
-		// Tier 2
-		a.Units.Add(new UnitDef("brute",   Tier: 2, Cost: 13, MaxHp: 130, Dps: 15, Range: 25, Speed: 70,  IsAir: false));
-		// Tier 3
-		a.Units.Add(new UnitDef("caster",  Tier: 3, Cost: 24, MaxHp: 70,  Dps: 28, Range: 150, Speed: 70, IsAir: false));
-		// Tier 4
-		a.Units.Add(new UnitDef("dragon",  Tier: 4, Cost: 45, MaxHp: 260, Dps: 46, Range: 110, Speed: 80, IsAir: true));
-
+		a.Units.Add(new UnitDef("raider", 1, 6,  55, 13, 25, 95, false));
+		a.Units.Add(new UnitDef("brute",  2, 13, 130, 15, 25, 70, false));
+		a.Units.Add(new UnitDef("caster", 3, 24, 70, 28, 150, 70, false));
+		a.Units.Add(new UnitDef("dragon", 4, 45, 260, 46, 110, 80, true));
 		return a;
 	}
 }
