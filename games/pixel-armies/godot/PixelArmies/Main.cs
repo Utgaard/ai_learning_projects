@@ -7,6 +7,7 @@ using SimSide = PixelArmies.SimCore.Side;
 
 public partial class Main : Node2D
 {
+	private const float GroundY = 120f;
 	private BattleSimulator? _sim;
 	private SimConfig? _cfg;
 
@@ -14,6 +15,7 @@ public partial class Main : Node2D
 	private float _printTimer;
 
 	private Camera2D? _cam;
+	private Battlefield? _battlefield;
 
 	public override void _Ready()
 	{
@@ -30,6 +32,16 @@ public partial class Main : Node2D
 		var left = DemoArmies.LeftBasic();
 		var right = DemoArmies.RightBasic();
 		_sim = new BattleSimulator(_cfg, left, right, seed: 12345);
+
+		// Battlefield background
+		_battlefield = new Battlefield
+		{
+			BattlefieldLength = _cfg.BattlefieldLength,
+			GroundY = GroundY,
+			ZIndex = -10,
+			ZAsRelative = true,
+		};
+		AddChild(_battlefield);
 
 		// Camera
 		_cam = new Camera2D
@@ -101,14 +113,10 @@ public partial class Main : Node2D
 		// Simple coordinate system:
 		// X = sim X
 		// Y = 0 is ground line; units drawn above it
-		float groundY = 120f;
-
-		// Ground
-		DrawLine(new Vector2(0, groundY), new Vector2(_cfg.BattlefieldLength, groundY), Colors.White, 2f);
 
 		// Bases
-		DrawRect(new Rect2(-30, groundY - 60, 30, 60), Colors.White);
-		DrawRect(new Rect2(_cfg.BattlefieldLength, groundY - 60, 30, 60), Colors.White);
+		DrawRect(new Rect2(-30, GroundY - 60, 30, 60), Colors.White);
+		DrawRect(new Rect2(_cfg.BattlefieldLength, GroundY - 60, 30, 60), Colors.White);
 
 		// Base HP bars (simple)
 		float barW = 120f;
@@ -116,16 +124,16 @@ public partial class Main : Node2D
 		float lPct = Mathf.Clamp(_sim.State.LeftBaseHp / _cfg.BaseMaxHp, 0f, 1f);
 		float rPct = Mathf.Clamp(_sim.State.RightBaseHp / _cfg.BaseMaxHp, 0f, 1f);
 
-		DrawRect(new Rect2(10, groundY + 20, barW, barH), Colors.Black);
-		DrawRect(new Rect2(10, groundY + 20, barW * lPct, barH), Colors.White);
+		DrawRect(new Rect2(10, GroundY + 20, barW, barH), Colors.Black);
+		DrawRect(new Rect2(10, GroundY + 20, barW * lPct, barH), Colors.White);
 
-		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, groundY + 20, barW, barH), Colors.Black);
-		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, groundY + 20, barW * rPct, barH), Colors.White);
+		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, GroundY + 20, barW, barH), Colors.Black);
+		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, GroundY + 20, barW * rPct, barH), Colors.White);
 
 		// Units as rectangles
 		foreach (var u in _sim.State.Units)
 		{
-			float y = groundY - 12;
+			float y = GroundY - 12;
 			float h = 12;
 			float w = 10;
 
