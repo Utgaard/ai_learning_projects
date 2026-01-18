@@ -7,7 +7,7 @@
 - Avoid new abstractions unless necessary.
 
 ## Workflow
-- Only work on tasks that are explicitly labeled `codex-ready`.
+
 - Follow the issue's "Files allowed to change" strictly.
 - After implementing, ensure the project still runs.
 - Commit with a clear message referencing the issue.
