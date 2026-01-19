@@ -162,7 +162,7 @@ Rules:
 - Same simulation must be usable for both visual gameplay and headless analyzer
 
 Outputs:
-- `BattleState` that fully describes the battle at any point in time
+- `BattleState` fully describing the battle at any point in time
 - Optional event stream (spawn/hit/death/base damage) for visuals and analytics
 
 #### 2) Content (Armies / Units / Abilities as Data)
@@ -201,12 +201,12 @@ Rationale:
 - Enables “wildly different units” while remaining deterministic, testable, and analyzable
 - Supports the headless analyzer and balancing workflow
 
-### Target Folder Structure (within Godot project)
-- `SimCore/` — deterministic battle logic only
-- `Content/` — data definitions and loaders (later: JSON/resources)
-- `GameHost/` — Godot runtime glue, menus, camera, render controllers
-- `Presentation/` — rendering code (units, battlefield, effects)
-- `Analyzer/` — CLI/headless analyzer entry and stats reporting
+### Target folder structure (inside the Godot project)
+- `Scripts/SimCore/` — deterministic battle logic only
+- `Scripts/Content/` — data definitions and loaders (later: JSON/resources)
+- `Scripts/GameHost/` — runtime glue, menus, camera, sim stepping
+- `Scripts/Presentation/` — rendering code (units, battlefield, effects)
+- `Scripts/Analyzer/` — CLI/headless analyzer entry and stats reporting
 
 
 ## 6. Open Questions & Risks
