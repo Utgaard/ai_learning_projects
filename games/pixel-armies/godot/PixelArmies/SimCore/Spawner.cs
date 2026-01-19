@@ -5,6 +5,8 @@ namespace PixelArmies.SimCore;
 
 public sealed class Spawner
 {
+	private const int FormationCount = 10;
+
 	private readonly Side _side;
 	private readonly ArmyDef _army;
 	private readonly SimConfig _cfg;
@@ -12,6 +14,7 @@ public sealed class Spawner
 
 	private float _power;
 	private float _spawnTimer;
+	private int _spawnCounter;
 
 	public Spawner(Side side, ArmyDef army, SimConfig cfg, Rng rng)
 	{
@@ -22,6 +25,7 @@ public sealed class Spawner
 
 		_power = cfg.StartingPower;
 		_spawnTimer = 0f;
+		_spawnCounter = 0;
 	}
 
 	public void Step(BattleState s, float dt)
@@ -54,6 +58,9 @@ public sealed class Spawner
 		_power -= chosen.Cost;
 
 		float spawnX = _side == Side.Left ? 0f : _cfg.BattlefieldLength;
-		s.Units.Add(new UnitState(s.NextUnitId++, _side, chosen, spawnX));
+		_spawnCounter++;
+		int spawnOrder = _spawnCounter;
+		bool inFormation = spawnOrder <= FormationCount;
+		s.Units.Add(new UnitState(s.NextUnitId++, _side, chosen, spawnX, spawnOrder, inFormation));
 	}
 }

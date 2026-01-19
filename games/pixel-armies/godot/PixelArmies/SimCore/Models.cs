@@ -39,15 +39,19 @@ public sealed class UnitState
 
 	public float X;          // 1D lane position
 	public float Hp;
+	public int SpawnOrder;
+	public bool InFormation;
 
 	public bool Alive => Hp > 0f;
 
-	public UnitState(int id, Side side, UnitDef def, float x)
+	public UnitState(int id, Side side, UnitDef def, float x, int spawnOrder, bool inFormation)
 	{
 		Id = id;
 		Side = side;
 		Def = def;
 		X = x;
 		Hp = def.MaxHp;
+		SpawnOrder = spawnOrder;
+		InFormation = inFormation;
 	}
 }

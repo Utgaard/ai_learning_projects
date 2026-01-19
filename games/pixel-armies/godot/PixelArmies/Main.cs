@@ -131,6 +131,9 @@ public partial class Main : Node2D
 		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, GroundY + 20, barW * rPct, barH), Colors.White);
 
 		// Units as rectangles
+		var font = ThemeDB.FallbackFont;
+		const int tierFontSize = 10;
+
 		foreach (var u in _sim.State.Units)
 		{
 			float y = GroundY - 12;
@@ -147,7 +150,16 @@ public partial class Main : Node2D
 			// Left units slightly different than right
 			var c = u.Side == SimSide.Left ? Colors.Cyan : Colors.Orange;
 
-			DrawRect(new Rect2(u.X - w * 0.5f, y - h, w, h), c);
+			var rect = new Rect2(u.X - w * 0.5f, y - h, w, h);
+			float outline = 1f + (u.Def.Tier - 1) * 1.2f;
+
+			DrawRect(rect, c);
+			DrawRect(rect, Colors.Black, false, outline);
+
+			string label = u.Def.Tier.ToString();
+			var labelSize = font.GetStringSize(label, fontSize: tierFontSize);
+			var labelPos = new Vector2(u.X - labelSize.X * 0.5f, y - h - 4f);
+			DrawString(font, labelPos, label, fontSize: tierFontSize, modulate: c);
 		}
 
 		// End text (minimal)

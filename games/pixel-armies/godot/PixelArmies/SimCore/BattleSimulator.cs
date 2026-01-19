@@ -65,6 +65,8 @@ public sealed class BattleSimulator
 		for (int i = 0; i < rightUnits.Count; i++) rightIndex[rightUnits[i].Id] = i;
 
 		var newX = new float[units.Count];
+		var prevHp = new float[units.Count];
+		for (int i = 0; i < units.Count; i++) prevHp[i] = units[i].Hp;
 
 		// Combat + movement
 		for (int i = 0; i < units.Count; i++)
@@ -77,8 +79,11 @@ public sealed class BattleSimulator
 			float enemyBaseX = u.Side == Side.Left ? _cfg.BattlefieldLength : 0f;
 
 			var target = FindNearestEnemyInFront(u, units, dir, out float targetDist);
+			float selfRadius = UnitSpacingRadius(u);
+			float targetRadius = target != null ? UnitSpacingRadius(target) : 0f;
 			bool hasEnemyInRange = target != null && targetDist <= u.Def.Range;
-			bool inContact = target != null && targetDist <= UnitRadius(u.Def) + UnitRadius(target.Def);
+			bool inContact = target != null && targetDist <= selfRadius + targetRadius;
+			if (u.InFormation && inContact) u.InFormation = false;
 
 			if (hasEnemyInRange)
 			{
@@ -109,7 +114,7 @@ public sealed class BattleSimulator
 
 			if (target != null)
 			{
-				float minDist = UnitRadius(u.Def) + UnitRadius(target.Def);
+				float minDist = selfRadius + targetRadius;
 				if (dir > 0f) desiredX = Math.Min(desiredX, target.X - minDist);
 				else desiredX = Math.Max(desiredX, target.X + minDist);
 			}
@@ -123,6 +128,13 @@ public sealed class BattleSimulator
 		for (int i = 0; i < units.Count; i++)
 		{
 			if (units[i].Alive) units[i].X = newX[i];
+		}
+
+		for (int i = 0; i < units.Count; i++)
+		{
+			var u = units[i];
+			if (!u.Alive) continue;
+			if (u.InFormation && u.Hp < prevHp[i]) u.InFormation = false;
 		}
 
 		leftUnits.Clear();
@@ -147,7 +159,12 @@ public sealed class BattleSimulator
 		}
 	}
 
-	private float UnitRadius(UnitDef def) => _cfg.UnitRadiusForTier(def.Tier);
+	private float UnitSpacingRadius(UnitState unit)
+	{
+		float r = _cfg.UnitRadiusForTier(unit.Def.Tier);
+		if (unit.InFormation) r *= 0.65f;
+		return r;
+	}
 
 	private static int CompareByXThenId(UnitState a, UnitState b)
 	{
@@ -166,7 +183,7 @@ public sealed class BattleSimulator
 			{
 				var back = sideUnits[i];
 				var front = sideUnits[i + 1];
-				float minGap = UnitRadius(back.Def) + UnitRadius(front.Def);
+				float minGap = UnitSpacingRadius(back) + UnitSpacingRadius(front);
 				float maxBackX = front.X - minGap;
 				if (back.X > maxBackX) back.X = maxBackX;
 			}
@@ -177,7 +194,7 @@ public sealed class BattleSimulator
 			{
 				var front = sideUnits[i - 1];
 				var back = sideUnits[i];
-				float minGap = UnitRadius(back.Def) + UnitRadius(front.Def);
+				float minGap = UnitSpacingRadius(back) + UnitSpacingRadius(front);
 				float minBackX = front.X + minGap;
 				if (back.X < minBackX) back.X = minBackX;
 			}
@@ -223,7 +240,7 @@ public sealed class BattleSimulator
 			if (leftIndex.TryGetValue(u.Id, out int idx) && idx < leftUnits.Count - 1)
 			{
 				var front = leftUnits[idx + 1];
-				float minGap = UnitRadius(u.Def) + UnitRadius(front.Def);
+				float minGap = UnitSpacingRadius(u) + UnitSpacingRadius(front);
 				float gap = front.X - u.X;
 				float maxAdvance = gap - minGap;
 				if (maxAdvance <= 0f) return 0f;
@@ -235,7 +252,7 @@ public sealed class BattleSimulator
 			if (rightIndex.TryGetValue(u.Id, out int idx) && idx > 0)
 			{
 				var front = rightUnits[idx - 1];
-				float minGap = UnitRadius(u.Def) + UnitRadius(front.Def);
+				float minGap = UnitSpacingRadius(u) + UnitSpacingRadius(front);
 				float gap = u.X - front.X;
 				float maxAdvance = gap - minGap;
 				if (maxAdvance <= 0f) return 0f;
