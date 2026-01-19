@@ -141,6 +141,74 @@ Notes:
 
 ---
 
+## 5.5 Architecture (DRAFT)
+
+Goal: Keep the project modular and scalable as content and complexity grows, with strict separation between simulation logic, content definitions, visualization, and analysis tooling.
+
+### Layers
+
+#### 1) SimCore (Deterministic Battle Simulation)
+Responsibilities:
+- Fixed-timestep simulation (stepper)
+- Unit movement, blocking/frontline behavior
+- Targeting and combat resolution
+- Spawning and escalation
+- Status effects and ability execution
+- Deterministic RNG (seeded) and stable iteration order
+
+Rules:
+- Pure C# logic: no Godot types (`Node`, `Vector2`, etc.)
+- No file IO, no rendering, no player input
+- Same simulation must be usable for both visual gameplay and headless analyzer
+
+Outputs:
+- `BattleState` that fully describes the battle at any point in time
+- Optional event stream (spawn/hit/death/base damage) for visuals and analytics
+
+#### 2) Content (Armies / Units / Abilities as Data)
+Responsibilities:
+- Define armies, units, tiers, stats, and abilities
+- Allow large numbers of armies and quick iteration without recompiling SimCore (target state)
+
+Rules:
+- Content is declarative (data-driven), not hard-coded logic
+- All content items have stable string IDs (units, abilities, armies)
+- Abilities are chosen from a finite set of supported ability types
+
+#### 3) Hosts (Ways to Run the Simulation)
+Two primary hosts run the same SimCore:
+- Game host (Godot runtime): runs simulation + renders the battle
+- Analyzer host (CLI/headless): runs N simulations fast with no rendering, outputs statistics
+
+#### 4) Presentation (Visualization / UI)
+Responsibilities:
+- Render units, terrain, bases, and effects from `BattleState`
+- Camera behavior (follow midpoint of frontline)
+- Non-interactive randomizer visualization (informational only)
+- Menus and army selection (battle setup only)
+
+Rules:
+- Presentation never decides battle outcomes
+- No gameplay logic in rendering/UI code
+
+### Abilities Model (Stats + Limited Ability Types)
+Approach:
+- Units are primarily differentiated by stats and a limited set of ability types (e.g., Cleave, Projectile, Pierce/Reach, OnDeathExplode, Aura, Stun, etc.)
+- Ability types have clear triggers (OnSpawn, OnAttack, OnHit, OnDeath, AuraTick) and deterministic behavior
+- Adding new ability types is done in SimCore code; content selects from supported types
+
+Rationale:
+- Enables “wildly different units” while remaining deterministic, testable, and analyzable
+- Supports the headless analyzer and balancing workflow
+
+### Target Folder Structure (within Godot project)
+- `Scripts/SimCore/` — deterministic battle logic only
+- `Scripts/Content/` — data definitions and loaders (later: JSON/resources)
+- `Scripts/GameHost/` — Godot runtime glue, menus, camera, render controllers
+- `Scripts/Presentation/` — rendering code (units, battlefield, effects)
+- `Scripts/Analyzer/` — CLI/headless analyzer entry and stats reporting
+
+
 ## 6. Open Questions & Risks
 
 - Optimal number of simultaneous units
