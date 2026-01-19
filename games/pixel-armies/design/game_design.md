@@ -202,11 +202,11 @@ Rationale:
 - Supports the headless analyzer and balancing workflow
 
 ### Target Folder Structure (within Godot project)
-- `Scripts/SimCore/` — deterministic battle logic only
-- `Scripts/Content/` — data definitions and loaders (later: JSON/resources)
-- `Scripts/GameHost/` — Godot runtime glue, menus, camera, render controllers
-- `Scripts/Presentation/` — rendering code (units, battlefield, effects)
-- `Scripts/Analyzer/` — CLI/headless analyzer entry and stats reporting
+- `SimCore/` — deterministic battle logic only
+- `Content/` — data definitions and loaders (later: JSON/resources)
+- `GameHost/` — Godot runtime glue, menus, camera, render controllers
+- `Presentation/` — rendering code (units, battlefield, effects)
+- `Analyzer/` — CLI/headless analyzer entry and stats reporting
 
 
 ## 6. Open Questions & Risks
