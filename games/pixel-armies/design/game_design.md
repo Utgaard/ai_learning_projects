@@ -226,3 +226,6 @@ Rationale:
 - 2026-01-17: Added more detail
 - 2026-01-16: Created initial GDD
 - 2026-01-16: Locked Core Pillars
+
+## 8. References
+- game_mechanics.md - repository for more detailed game mechanics description
