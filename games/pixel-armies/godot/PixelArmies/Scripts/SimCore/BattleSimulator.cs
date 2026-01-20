@@ -65,8 +65,6 @@ public sealed class BattleSimulator
 		for (int i = 0; i < rightUnits.Count; i++) rightIndex[rightUnits[i].Id] = i;
 
 		var newX = new float[units.Count];
-		var prevHp = new float[units.Count];
-		for (int i = 0; i < units.Count; i++) prevHp[i] = units[i].Hp;
 
 		// Combat + movement
 		for (int i = 0; i < units.Count; i++)
@@ -83,7 +81,6 @@ public sealed class BattleSimulator
 			float targetRadius = target != null ? UnitSpacingRadius(target) : 0f;
 			bool hasEnemyInRange = target != null && targetDist <= u.Def.Range;
 			bool inContact = target != null && targetDist <= selfRadius + targetRadius;
-			if (u.InFormation && inContact) u.InFormation = false;
 
 			if (hasEnemyInRange)
 			{
@@ -130,13 +127,6 @@ public sealed class BattleSimulator
 			if (units[i].Alive) units[i].X = newX[i];
 		}
 
-		for (int i = 0; i < units.Count; i++)
-		{
-			var u = units[i];
-			if (!u.Alive) continue;
-			if (u.InFormation && u.Hp < prevHp[i]) u.InFormation = false;
-		}
-
 		leftUnits.Clear();
 		rightUnits.Clear();
 		for (int i = 0; i < units.Count; i++)
@@ -162,8 +152,9 @@ public sealed class BattleSimulator
 	private float UnitSpacingRadius(UnitState unit)
 	{
 		float r = _cfg.UnitRadiusForTier(unit.Def.Tier);
-		if (unit.InFormation) r *= 0.65f;
-		return r;
+		float mul = unit.Def.FormationSpacingMul;
+		if (mul <= 0f) mul = 1f;
+		return r * mul;
 	}
 
 	private static int CompareByXThenId(UnitState a, UnitState b)
