@@ -2,6 +2,8 @@
 
 using Godot;
 
+namespace PixelArmies.Presentation;
+
 public partial class Battlefield : Node2D
 {
 	[Export] public float BattlefieldLength { get; set; } = 2000f;

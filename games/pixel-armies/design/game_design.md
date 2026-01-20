@@ -221,6 +221,7 @@ Rationale:
 ---
 
 ## 7. Change Log
+- 2026-01-18: Aligned project folders with architecture layers
 - 2026-01-17: Added headless matchup analyzer for balancing/statistics
 - 2026-01-17: Added more detail
 - 2026-01-16: Created initial GDD
