@@ -10,7 +10,8 @@ public readonly record struct UnitDef(
 	int Tier,            // 1..4
 	float Cost,          // "energy" cost
 	float MaxHp,
-	float Dps,
+	float Damage,
+	float AttackRate,
 	float Range,
 	float Speed,
 	bool IsAir,
@@ -42,6 +43,7 @@ public sealed class UnitState
 
 	public float X;          // 1D lane position
 	public float Hp;
+	public float AttackCooldown;
 
 	public bool Alive => Hp > 0f;
 
@@ -52,5 +54,6 @@ public sealed class UnitState
 		Def = def;
 		X = x;
 		Hp = def.MaxHp;
+		AttackCooldown = 0f;
 	}
 }

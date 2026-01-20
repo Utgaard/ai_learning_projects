@@ -91,6 +91,8 @@ This game explicitly avoids:
 ### Combat Resolution
 - Simple physical interactions
 - Emphasis on visual clarity and chaos
+- Units attack when their cooldown reaches 0 and a target is in range.
+- On attack, they apply Damage once and reset cooldown to (1 / AttackRate).
 
 ### Formation & Vanguard Mechanics
 Goal: Improve readability by giving unit types distinct spacing patterns at the frontline without changing combat rules.

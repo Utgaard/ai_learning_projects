@@ -8,6 +8,7 @@ namespace PixelArmies.SimCore;
 public sealed class BattleSimulator
 {
 	private const float RangedMinRange = 80f;
+	private const float MinAttackRate = 0.1f;
 
 	private readonly SimConfig _cfg;
 	private readonly ArmyDef _leftArmy;
@@ -90,11 +91,17 @@ public sealed class BattleSimulator
 			bool hasEnemyInRange = target != null && targetDist <= u.Def.Range;
 			bool inContact = target != null && targetDist <= selfRadius + targetRadius;
 
+			u.AttackCooldown = Math.Max(0f, u.AttackCooldown - dt);
+
 			if (hasEnemyInRange)
 			{
-				float dmg = u.Def.Dps * dt;
-				target!.Hp -= dmg;
-				_damageEvents.Add(new DamageEvent(u.Id, target.Id, dmg, IsRanged(u.Def)));
+				if (u.AttackCooldown <= 0f)
+				{
+					float dmg = u.Def.Damage;
+					target!.Hp -= dmg;
+					_damageEvents.Add(new DamageEvent(u.Id, target.Id, dmg, IsRanged(u.Def)));
+					u.AttackCooldown = AttackCooldownFor(u.Def);
+				}
 				continue;
 			}
 
@@ -103,9 +110,13 @@ public sealed class BattleSimulator
 				float distToBase = Math.Abs(enemyBaseX - u.X);
 				if (distToBase <= _cfg.BaseAttackRange)
 				{
-					float dmg = u.Def.Dps * dt;
-					if (u.Side == Side.Left) State.RightBaseHp -= dmg;
-					else State.LeftBaseHp -= dmg;
+					if (u.AttackCooldown <= 0f)
+					{
+						float dmg = u.Def.Damage;
+						if (u.Side == Side.Left) State.RightBaseHp -= dmg;
+						else State.LeftBaseHp -= dmg;
+						u.AttackCooldown = AttackCooldownFor(u.Def);
+					}
 					continue;
 				}
 			}
@@ -355,6 +366,12 @@ public sealed class BattleSimulator
 	private static float NormalizeSpacingMul(float mul) => mul > 0f ? mul : 1f;
 
 	private static bool IsRanged(UnitDef attacker) => attacker.Range >= RangedMinRange;
+	private static float AttackCooldownFor(UnitDef attacker)
+	{
+		float rate = attacker.AttackRate;
+		if (rate < MinAttackRate) rate = MinAttackRate;
+		return 1f / rate;
+	}
 
 	public IReadOnlyList<DamageEvent> ConsumeDamageEvents()
 	{
