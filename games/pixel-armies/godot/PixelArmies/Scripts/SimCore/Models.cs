@@ -14,7 +14,9 @@ public readonly record struct UnitDef(
 	float Range,
 	float Speed,
 	bool IsAir,
-	float FormationSpacingMul = 1f
+	float FormationSpacingMul = 1f,
+	int VanguardDepth = 0,
+	float VanguardSpacingMul = 0f
 );
 
 public sealed class ArmyDef

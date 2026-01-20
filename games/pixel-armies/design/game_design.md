@@ -92,6 +92,20 @@ This game explicitly avoids:
 - Simple physical interactions
 - Emphasis on visual clarity and chaos
 
+### Formation & Vanguard Mechanics
+Goal: Improve readability by giving unit types distinct spacing patterns at the frontline without changing combat rules.
+
+Rules:
+- Each unit type defines `FormationSpacingMul` (baseline ally spacing multiplier).
+  - < 1.0 = tighter formation
+  - > 1.0 = looser spacing
+- Each unit type may define a vanguard:
+  - `VanguardDepth` = number of closest units of that type to the frontline that use vanguard spacing
+  - `VanguardSpacingMul` = spacing multiplier for those vanguard units (defaults to FormationSpacingMul)
+- Vanguard selection is positional and recomputed each sim step.
+- Vanguard clusters are homogeneous per unit type (no mixing types into a single vanguard count).
+- Vanguard only affects ally spacing; combat and targeting rules are unchanged.
+
 ### Terrain
 - Deformable terrain under consideration
 - Must remain readable and performant

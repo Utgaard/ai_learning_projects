@@ -56,8 +56,11 @@ public sealed class BattleSimulator
 		leftUnits.Sort(CompareByXThenId);
 		rightUnits.Sort(CompareByXThenId);
 
-		EnforceSpacing(leftUnits, isLeftSide: true);
-		EnforceSpacing(rightUnits, isLeftSide: false);
+		var formationMulByUnitId = BuildFormationMultipliers(leftUnits, rightUnits);
+		var allySpacingMulByUnitId = BuildAllySpacingMultipliers(leftUnits, rightUnits, formationMulByUnitId);
+
+		EnforceSpacing(leftUnits, isLeftSide: true, allySpacingMulByUnitId);
+		EnforceSpacing(rightUnits, isLeftSide: false, allySpacingMulByUnitId);
 
 		var leftIndex = new Dictionary<int, int>(leftUnits.Count);
 		var rightIndex = new Dictionary<int, int>(rightUnits.Count);
@@ -77,8 +80,8 @@ public sealed class BattleSimulator
 			float enemyBaseX = u.Side == Side.Left ? _cfg.BattlefieldLength : 0f;
 
 			var target = FindNearestEnemyInFront(u, units, dir, out float targetDist);
-			float selfRadius = UnitSpacingRadius(u);
-			float targetRadius = target != null ? UnitSpacingRadius(target) : 0f;
+			float selfRadius = UnitSpacingRadius(u, formationMulByUnitId);
+			float targetRadius = target != null ? UnitSpacingRadius(target, formationMulByUnitId) : 0f;
 			bool hasEnemyInRange = target != null && targetDist <= u.Def.Range;
 			bool inContact = target != null && targetDist <= selfRadius + targetRadius;
 
@@ -105,7 +108,7 @@ public sealed class BattleSimulator
 			if (!inContact)
 			{
 				float moveDist = u.Def.Speed * dt;
-				moveDist = ClampMoveByAllySpacing(u, moveDist, leftUnits, rightUnits, leftIndex, rightIndex);
+				moveDist = ClampMoveByAllySpacing(u, moveDist, leftUnits, rightUnits, leftIndex, rightIndex, allySpacingMulByUnitId);
 				desiredX = u.X + dir * moveDist;
 			}
 
@@ -138,8 +141,10 @@ public sealed class BattleSimulator
 		}
 		leftUnits.Sort(CompareByXThenId);
 		rightUnits.Sort(CompareByXThenId);
-		EnforceSpacing(leftUnits, isLeftSide: true);
-		EnforceSpacing(rightUnits, isLeftSide: false);
+		formationMulByUnitId = BuildFormationMultipliers(leftUnits, rightUnits);
+		allySpacingMulByUnitId = BuildAllySpacingMultipliers(leftUnits, rightUnits, formationMulByUnitId);
+		EnforceSpacing(leftUnits, isLeftSide: true, allySpacingMulByUnitId);
+		EnforceSpacing(rightUnits, isLeftSide: false, allySpacingMulByUnitId);
 
 		// Cleanup dead units occasionally (cheap)
 		// (Could do each step for now)
@@ -149,11 +154,11 @@ public sealed class BattleSimulator
 		}
 	}
 
-	private float UnitSpacingRadius(UnitState unit)
+	private float UnitSpacingRadius(UnitState unit, Dictionary<int, float> spacingMulByUnitId)
 	{
 		float r = _cfg.UnitRadiusForTier(unit.Def.Tier);
-		float mul = unit.Def.FormationSpacingMul;
-		if (mul <= 0f) mul = 1f;
+		float mul = 1f;
+		if (!spacingMulByUnitId.TryGetValue(unit.Id, out mul)) mul = 1f;
 		return r * mul;
 	}
 
@@ -164,7 +169,7 @@ public sealed class BattleSimulator
 		return a.Id.CompareTo(b.Id);
 	}
 
-	private void EnforceSpacing(List<UnitState> sideUnits, bool isLeftSide)
+	private void EnforceSpacing(List<UnitState> sideUnits, bool isLeftSide, Dictionary<int, float> spacingMulByUnitId)
 	{
 		if (sideUnits.Count < 2) return;
 
@@ -174,7 +179,7 @@ public sealed class BattleSimulator
 			{
 				var back = sideUnits[i];
 				var front = sideUnits[i + 1];
-				float minGap = UnitSpacingRadius(back) + UnitSpacingRadius(front);
+				float minGap = UnitSpacingRadius(back, spacingMulByUnitId) + UnitSpacingRadius(front, spacingMulByUnitId);
 				float maxBackX = front.X - minGap;
 				if (back.X > maxBackX) back.X = maxBackX;
 			}
@@ -185,7 +190,7 @@ public sealed class BattleSimulator
 			{
 				var front = sideUnits[i - 1];
 				var back = sideUnits[i];
-				float minGap = UnitSpacingRadius(back) + UnitSpacingRadius(front);
+				float minGap = UnitSpacingRadius(back, spacingMulByUnitId) + UnitSpacingRadius(front, spacingMulByUnitId);
 				float minBackX = front.X + minGap;
 				if (back.X < minBackX) back.X = minBackX;
 			}
@@ -222,7 +227,8 @@ public sealed class BattleSimulator
 		List<UnitState> leftUnits,
 		List<UnitState> rightUnits,
 		Dictionary<int, int> leftIndex,
-		Dictionary<int, int> rightIndex)
+		Dictionary<int, int> rightIndex,
+		Dictionary<int, float> spacingMulByUnitId)
 	{
 		if (moveDist <= 0f) return 0f;
 
@@ -231,7 +237,7 @@ public sealed class BattleSimulator
 			if (leftIndex.TryGetValue(u.Id, out int idx) && idx < leftUnits.Count - 1)
 			{
 				var front = leftUnits[idx + 1];
-				float minGap = UnitSpacingRadius(u) + UnitSpacingRadius(front);
+				float minGap = UnitSpacingRadius(u, spacingMulByUnitId) + UnitSpacingRadius(front, spacingMulByUnitId);
 				float gap = front.X - u.X;
 				float maxAdvance = gap - minGap;
 				if (maxAdvance <= 0f) return 0f;
@@ -243,7 +249,7 @@ public sealed class BattleSimulator
 			if (rightIndex.TryGetValue(u.Id, out int idx) && idx > 0)
 			{
 				var front = rightUnits[idx - 1];
-				float minGap = UnitSpacingRadius(u) + UnitSpacingRadius(front);
+				float minGap = UnitSpacingRadius(u, spacingMulByUnitId) + UnitSpacingRadius(front, spacingMulByUnitId);
 				float gap = u.X - front.X;
 				float maxAdvance = gap - minGap;
 				if (maxAdvance <= 0f) return 0f;
@@ -253,4 +259,92 @@ public sealed class BattleSimulator
 
 		return moveDist;
 	}
+
+	private Dictionary<int, float> BuildFormationMultipliers(List<UnitState> leftUnits, List<UnitState> rightUnits)
+	{
+		var spacingMulByUnitId = new Dictionary<int, float>(leftUnits.Count + rightUnits.Count);
+
+		for (int i = 0; i < leftUnits.Count; i++)
+		{
+			var u = leftUnits[i];
+			spacingMulByUnitId[u.Id] = NormalizeSpacingMul(u.Def.FormationSpacingMul);
+		}
+
+		for (int i = 0; i < rightUnits.Count; i++)
+		{
+			var u = rightUnits[i];
+			spacingMulByUnitId[u.Id] = NormalizeSpacingMul(u.Def.FormationSpacingMul);
+		}
+		return spacingMulByUnitId;
+	}
+
+	private Dictionary<int, float> BuildAllySpacingMultipliers(
+		List<UnitState> leftUnits,
+		List<UnitState> rightUnits,
+		Dictionary<int, float> formationMulByUnitId)
+	{
+		var spacingMulByUnitId = new Dictionary<int, float>(formationMulByUnitId);
+		ApplyVanguardSpacing(leftUnits, isLeftSide: true, spacingMulByUnitId);
+		ApplyVanguardSpacing(rightUnits, isLeftSide: false, spacingMulByUnitId);
+		return spacingMulByUnitId;
+	}
+
+	private void ApplyVanguardSpacing(
+		List<UnitState> sideUnits,
+		bool isLeftSide,
+		Dictionary<int, float> spacingMulByUnitId)
+	{
+		if (sideUnits.Count == 0) return;
+
+		float frontline = isLeftSide ? float.MinValue : float.MaxValue;
+		for (int i = 0; i < sideUnits.Count; i++)
+		{
+			float x = sideUnits[i].X;
+			if (isLeftSide) frontline = Math.Max(frontline, x);
+			else frontline = Math.Min(frontline, x);
+		}
+
+		var byType = new Dictionary<string, List<UnitState>>();
+		for (int i = 0; i < sideUnits.Count; i++)
+		{
+			var u = sideUnits[i];
+			string key = u.Def.Id;
+			if (!byType.TryGetValue(key, out var list))
+			{
+				list = new List<UnitState>();
+				byType[key] = list;
+			}
+			list.Add(u);
+		}
+
+		foreach (var kvp in byType)
+		{
+			var list = kvp.Value;
+			if (list.Count == 0) continue;
+
+			int depth = list[0].Def.VanguardDepth;
+			if (depth <= 0) continue;
+
+			list.Sort((a, b) =>
+			{
+				float da = isLeftSide ? (frontline - a.X) : (a.X - frontline);
+				float db = isLeftSide ? (frontline - b.X) : (b.X - frontline);
+				int cmp = da.CompareTo(db);
+				if (cmp != 0) return cmp;
+				return a.Id.CompareTo(b.Id);
+			});
+
+			float vanguardMul = list[0].Def.VanguardSpacingMul;
+			if (vanguardMul <= 0f) vanguardMul = list[0].Def.FormationSpacingMul;
+			vanguardMul = NormalizeSpacingMul(vanguardMul);
+
+			int count = Math.Min(depth, list.Count);
+			for (int i = 0; i < count; i++)
+			{
+				spacingMulByUnitId[list[i].Id] = vanguardMul;
+			}
+		}
+	}
+
+	private static float NormalizeSpacingMul(float mul) => mul > 0f ? mul : 1f;
 }
