@@ -1,5 +1,6 @@
 #nullable enable
 
+using System.Collections.Generic;
 using Godot;
 using PixelArmies.Content;
 using PixelArmies.Presentation;
@@ -21,6 +22,7 @@ public partial class BattleGameHost : Node2D
 	private Camera2D? _cam;
 	private Battlefield? _battlefield;
 	private BattleView? _view;
+	private readonly List<DamageEvent> _frameDamageEvents = new();
 
 	public override void _Ready()
 	{
@@ -62,14 +64,23 @@ public partial class BattleGameHost : Node2D
 	{
 		if (_sim == null || _cfg == null || _view == null) return;
 
+		_frameDamageEvents.Clear();
+
 		if (!_sim.State.IsOver)
 		{
 			_accum += (float)delta;
 			while (_accum >= SimConfig.FixedDt)
 			{
 				_sim.Step(SimConfig.FixedDt);
+				var events = _sim.ConsumeDamageEvents();
+				if (events.Count > 0) _frameDamageEvents.AddRange(events);
 				_accum -= SimConfig.FixedDt;
 			}
+		}
+		else
+		{
+			var events = _sim.ConsumeDamageEvents();
+			if (events.Count > 0) _frameDamageEvents.AddRange(events);
 		}
 
 		// Debug prints
@@ -80,6 +91,7 @@ public partial class BattleGameHost : Node2D
 			GD.Print($"t={_sim.State.Time:0.0}s units={_sim.State.Units.Count} LBase={_sim.State.LeftBaseHp:0} RBase={_sim.State.RightBaseHp:0}");
 		}
 
+		_view.Advance((float)delta, _frameDamageEvents);
 		UpdateCamera();
 		_view.QueueRedraw();
 	}

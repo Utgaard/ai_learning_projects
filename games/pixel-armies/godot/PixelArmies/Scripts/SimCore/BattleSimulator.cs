@@ -7,6 +7,8 @@ namespace PixelArmies.SimCore;
 
 public sealed class BattleSimulator
 {
+	private const float RangedMinRange = 80f;
+
 	private readonly SimConfig _cfg;
 	private readonly ArmyDef _leftArmy;
 	private readonly ArmyDef _rightArmy;
@@ -14,6 +16,9 @@ public sealed class BattleSimulator
 
 	private readonly Spawner _leftSpawner;
 	private readonly Spawner _rightSpawner;
+
+	private List<DamageEvent> _damageEvents = new();
+	private List<DamageEvent> _damageEventsBuffer = new();
 
 	public BattleState State { get; }
 
@@ -89,6 +94,7 @@ public sealed class BattleSimulator
 			{
 				float dmg = u.Def.Dps * dt;
 				target!.Hp -= dmg;
+				_damageEvents.Add(new DamageEvent(u.Id, target.Id, dmg, IsRanged(u.Def)));
 				continue;
 			}
 
@@ -347,4 +353,15 @@ public sealed class BattleSimulator
 	}
 
 	private static float NormalizeSpacingMul(float mul) => mul > 0f ? mul : 1f;
+
+	private static bool IsRanged(UnitDef attacker) => attacker.Range >= RangedMinRange;
+
+	public IReadOnlyList<DamageEvent> ConsumeDamageEvents()
+	{
+		var events = _damageEvents;
+		_damageEvents = _damageEventsBuffer;
+		_damageEventsBuffer = events;
+		_damageEvents.Clear();
+		return events;
+	}
 }

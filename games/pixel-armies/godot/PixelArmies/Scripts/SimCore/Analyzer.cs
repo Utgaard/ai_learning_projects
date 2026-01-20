@@ -47,7 +47,10 @@ public static class Analyzer
             // Hard cap to avoid infinite battles in early tuning
             const float maxTime = 240f; // 4 minutes
             while (!sim.State.IsOver && sim.State.Time < maxTime)
+            {
                 sim.Step(SimConfig.FixedDt);
+                sim.ConsumeDamageEvents();
+            }
 
             // If timed out, treat as "no result" => count as right win for now (arbitrary).
             // We can make draws explicit later.
