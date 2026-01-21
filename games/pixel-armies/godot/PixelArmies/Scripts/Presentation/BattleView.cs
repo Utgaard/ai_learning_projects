@@ -25,6 +25,7 @@ public partial class BattleView : Node2D
 	private readonly List<FloatingNumber> _floatingNumbers = new();
 	private readonly List<Tracer> _tracers = new();
 	private readonly List<int> _scratchKeys = new();
+	private readonly HitReactionSystem _hitReactions = new();
 
 	public float GroundY { get; private set; } = 120f;
 
@@ -45,6 +46,8 @@ public partial class BattleView : Node2D
 		{
 			ApplyDamageEvents(damageEvents);
 		}
+
+		_hitReactions.Advance(dt, damageEvents, _unitPositions);
 
 		UpdateFlashTimers(dt);
 		UpdateDamageBuckets(dt);
@@ -98,7 +101,13 @@ public partial class BattleView : Node2D
 			// Left units slightly different than right
 			var c = u.Side == SimSide.Left ? Colors.Cyan : Colors.Orange;
 
-			var rect = new Rect2(u.X - w * 0.5f, y - h, w, h);
+			var center = GetUnitCenter(u, w, h, y);
+			if (_hitReactions.TryGetRenderCenter(u.Id, out var renderCenter))
+			{
+				center = renderCenter;
+			}
+
+			var rect = new Rect2(center.X - w * 0.5f, center.Y - h * 0.5f, w, h);
 			float outline = 1f + (u.Def.Tier - 1) * 1.2f;
 
 			DrawRect(rect, c);
@@ -113,7 +122,7 @@ public partial class BattleView : Node2D
 
 			string label = u.Def.Tier.ToString();
 			var labelSize = font.GetStringSize(label, fontSize: tierFontSize);
-			var labelPos = new Vector2(u.X - labelSize.X * 0.5f, y - h - 4f);
+			var labelPos = new Vector2(center.X - labelSize.X * 0.5f, center.Y - h * 0.5f - 4f);
 			DrawString(font, labelPos, label, fontSize: tierFontSize, modulate: c);
 		}
 
@@ -135,25 +144,17 @@ public partial class BattleView : Node2D
 		foreach (var u in _sim.State.Units)
 		{
 			if (!u.Alive) continue;
-			var rect = GetUnitRect(u);
-			_unitPositions[u.Id] = new Vector2(rect.Position.X + rect.Size.X * 0.5f, rect.Position.Y + rect.Size.Y * 0.5f);
+			float y = GroundY - 12;
+			float h = 12 + (u.Def.Tier - 1) * 4;
+			float w = 10 + (u.Def.Tier - 1) * 4;
+			if (u.Def.IsAir) y -= 40f;
+			_unitPositions[u.Id] = GetUnitCenter(u, w, h, y);
 		}
 	}
 
-	private Rect2 GetUnitRect(UnitState u)
+	private static Vector2 GetUnitCenter(UnitState u, float w, float h, float y)
 	{
-		float y = GroundY - 12;
-		float h = 12;
-		float w = 10;
-
-		// Make big units bigger (tier proxy)
-		w += (u.Def.Tier - 1) * 4;
-		h += (u.Def.Tier - 1) * 4;
-
-		if (u.Def.IsAir)
-			y -= 40f; // air height
-
-		return new Rect2(u.X - w * 0.5f, y - h, w, h);
+		return new Vector2(u.X, y - h * 0.5f);
 	}
 
 	private void ApplyDamageEvents(IReadOnlyList<DamageEvent> damageEvents)
