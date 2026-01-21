@@ -35,25 +35,52 @@ public sealed class Spawner
 		// If we can't afford even the cheapest unit, do nothing this tick
 		if (_power < _army.MinCost()) return;
 
-		// Choose among affordable units. Weight slightly toward higher tier over time.
-		var affordable = new List<(UnitDef item, float weight)>();
-		foreach (var u in _army.Units)
+		int unlockedTier = _cfg.UnlockedTierForTime(s.Time);
+		int chosenTier = PickTier(unlockedTier);
+
+		UnitDef? chosen = null;
+		for (int tier = chosenTier; tier >= 1; tier--)
 		{
-			if (u.Cost <= _power)
+			var candidates = new List<(UnitDef item, float weight)>();
+			foreach (var u in _army.Units)
 			{
-				// Weight: prefer higher tier but still allow variety
-				float tierBoost = 1f + (u.Tier - 1) * 0.35f;
-				float costPenalty = 1f / Math.Max(1f, u.Cost);
-				affordable.Add((u, tierBoost * costPenalty));
+				if (u.Tier != tier) continue;
+				if (u.Cost > _power) continue;
+				candidates.Add((u, 1f));
 			}
+			if (candidates.Count == 0) continue;
+
+			chosen = _rng.PickWeighted(candidates);
+			break;
 		}
-		if (affordable.Count == 0) return;
+		if (chosen == null) return;
 
-		var chosen = _rng.PickWeighted(affordable);
-
-		_power -= chosen.Cost;
+		_power -= chosen.Value.Cost;
 
 		float spawnX = _side == Side.Left ? 0f : _cfg.BattlefieldLength;
-		s.Units.Add(new UnitState(s.NextUnitId++, _side, chosen, spawnX));
+		s.Units.Add(new UnitState(s.NextUnitId++, _side, chosen.Value, spawnX));
+	}
+
+	private static float TierWeight(int tier)
+	{
+		return tier switch
+		{
+			1 => 6f,
+			2 => 4f,
+			3 => 2f,
+			4 => 1f,
+			_ => 1f
+		};
+	}
+
+	private int PickTier(int unlockedTier)
+	{
+		int maxTier = Math.Clamp(unlockedTier, 1, 4);
+		var weighted = new List<(int item, float weight)>(maxTier);
+		for (int tier = 1; tier <= maxTier; tier++)
+		{
+			weighted.Add((tier, TierWeight(tier)));
+		}
+		return _rng.PickWeighted(weighted);
 	}
 }

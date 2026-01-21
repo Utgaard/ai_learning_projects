@@ -23,7 +23,6 @@ public partial class BattleGameHost : Node2D
 	private SimConfig? _cfg;
 
 	private float _accum;
-	private float _printTimer;
 
 	private Camera2D? _cam;
 	private Battlefield? _battlefield;
@@ -92,14 +91,6 @@ public partial class BattleGameHost : Node2D
 			if (events.Count > 0) _frameDamageEvents.AddRange(events);
 			var deaths = _sim.ConsumeUnitDiedEvents();
 			if (deaths.Count > 0) _frameDeathEvents.AddRange(deaths);
-		}
-
-		// Debug prints
-		_printTimer += (float)delta;
-		if (_printTimer >= 1.0f && !_sim.State.IsOver)
-		{
-			_printTimer = 0f;
-			GD.Print($"t={_sim.State.Time:0.0}s units={_sim.State.Units.Count} LBase={_sim.State.LeftBaseHp:0} RBase={_sim.State.RightBaseHp:0}");
 		}
 
 		_view.Advance((float)delta, _frameDamageEvents, _frameDeathEvents);

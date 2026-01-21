@@ -84,11 +84,13 @@ public partial class BattleView : Node2D
 		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, GroundY + 20, barW, barH), Colors.Black);
 		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, GroundY + 20, barW * rPct, barH), Colors.White);
 
+		var font = ThemeDB.FallbackFont;
+
+		DrawTierOverlay(font);
 		DrawTracers();
 		_deathEffects.Draw(this);
 
 		// Units as rectangles
-		var font = ThemeDB.FallbackFont;
 		const int tierFontSize = 10;
 
 		foreach (var u in _sim.State.Units)
@@ -140,6 +142,20 @@ public partial class BattleView : Node2D
 			var winner = _sim.State.Winner == SimSide.Left ? "LEFT WINS" : "RIGHT WINS";
 			DrawString(font, new Vector2(20, 40), winner, fontSize: 32, modulate: Colors.White);
 		}
+	}
+
+	private void DrawTierOverlay(Font font)
+	{
+		if (_sim == null || _cfg == null) return;
+
+		int tier = _cfg.UnlockedTierForTime(_sim.State.Time);
+		string timeText = $"t={_sim.State.Time:0}s  L_Tier={tier}  R_Tier={tier}";
+		DrawString(font, new Vector2(10f, 18f), timeText, fontSize: 12, modulate: Colors.White);
+
+		string tierText = $"L:{tier}  R:{tier}";
+		var size = font.GetStringSize(tierText, fontSize: 12);
+		float rightX = GetViewportRect().Size.X - size.X - 10f;
+		DrawString(font, new Vector2(rightX, 18f), tierText, fontSize: 12, modulate: Colors.White);
 	}
 
 	private void UpdateUnitPositions()
