@@ -138,3 +138,64 @@ Automated camera framing.
     * Object Pooling for Units and Projectiles.
     * Ragdoll "Freezing" (turning kinematic) after static duration.
     * Sprite Atlasing to reduce Draw Calls.
+
+## 7. System Architecture & Engineering
+
+To support modularity, high-performance physics, and a headless simulation mode, Project MABS utilizes a **Data-Oriented, Event-Driven Architecture**.
+
+### 7.1 Core Patterns
+* **Separation of Concerns (MVC-lite):** Game Logic (`UnitController`) is strictly separated from Visualization (`UnitView`). The Controller fires events; the View reacts.
+* **Composition over Inheritance:** Units are defined by a collection of Data Components (Stats, Abilities, Physics Profile) rather than a deep, rigid class hierarchy.
+* **Dependency Injection:** Systems (like the `LaneManager` or `EconomySystem`) are injected into units upon spawn, preventing singleton "spaghetti code."
+
+### 7.2 The Three Layers
+
+The architecture is divided into three distinct layers to ensure the game can run without graphics.
+
+
+
+#### **Layer 1: The Data Layer (ScriptableObjects)**
+The "DNA" of the game. These files exist in the project folder and define the rules without containing logic.
+* **`ArmyDefinition`**: The root object for a faction.
+* **`UnitDefinition`**: Holds raw data (`Health`, `Damage`, `MoveSpeed`, `PrefabReference`).
+* **`AbilityDefinition`**: Modular logic blocks (e.g., `SpawnProjectile`, `ApplyKnockback`, `HealArea`).
+
+#### **Layer 2: The Simulation Layer (The "Core")**
+This layer runs the math, AI, and physics. It is active in both "Visual" and "Headless" modes.
+* **`BattleManager`**: The conductor. Manages the Game Loop, TimeScale, and Win/Loss states.
+* **`UnitController`**: The brain of a unit.
+    * *Responsibility:* Movement logic, Target selection (Raycasting), Cooldown management, HP tracking.
+    * *Output:* Fires C# Actions: `OnMove`, `OnAttack(target)`, `OnTakeDamage`, `OnDeath`.
+* **`LaneManager`**: Spatial partitioning system. Keeps lists of units sorted by X-position for optimized targeting queries (O(1) lookups instead of O(N) searching).
+* **`ProbabilitySpawner`**: The math-based version of the spawner used for the AI or Headless mode.
+
+#### **Layer 3: The Presentation Layer (The "Shell")**
+This layer handles Graphics and Audio. **It is disabled in Headless Mode.**
+* **`UnitView`**: Sits on the Game Object. Subscribes to `UnitController` events.
+    * *OnMove:* Sets Animator bool `isWalking = true`.
+    * *OnAttack:* Triggers Animator trigger `Attack`.
+    * *OnDeath:* Disables Animator, enables Ragdoll Physics.
+* **`PhysicsSpawnerVisualizer`**: The "Pachinko" machine. It drops physical balls. When a ball hits a bucket trigger, it notifies the `EconomySystem`.
+
+### 7.3 The "Headless" Implementation Strategy
+To validate balance rapidly, the game must run without rendering.
+
+1.  **Rendering Check:** On `Awake()`, the `GameManager` checks for the command line argument `-batchmode`.
+2.  **View Stripping:** If Headless, the `UnitFactory` spawns units **without** the `UnitView` component, `SkinnedMeshRenderer`, or `AudioSource`. Only the `UnitController` and `CapsuleCollider` (for lane detection) remain.
+3.  **Visual Bypass:**
+    * *Spawner:* The `PhysicsSpawnerVisualizer` is disabled. The `ProbabilitySpawner` takes over, generating income based on pre-calculated lookup tables.
+4.  **TimeScale:** The game sets `Time.timeScale = 100.0f` (or max stable physics step) to resolve battles in seconds.
+
+### 7.4 Modularity: The "Ability System"
+To support "wildly different" units (e.g., a Medusa that freezes enemies vs. a Robot that shoots lasers), we use a modular Ability system rather than hard-coding attacks.
+
+
+
+* **`IAbilityEffect` Interface:**
+    * `Execute(UnitController source, UnitController target)`
+* **Concrete Effects:**
+    * `DamageEffect`: Simply subtracts HP.
+    * `KnockbackEffect`: Adds force to the target's Rigidbody.
+    * `SpawnMinionEffect`: Spawns a new unit at target location.
+    * `StatusEffect`: Adds a modifier (Slow, Poison) to the target.
+* **Workflow:** A `UnitDefinition` has a list of `AbilityDefinitions`. When the unit attacks, it iterates through this list and calls `Execute()`. This allows designers to create complex new units just by mixing and matching effects in the Inspector.
