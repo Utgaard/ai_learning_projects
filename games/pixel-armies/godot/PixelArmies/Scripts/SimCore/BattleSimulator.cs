@@ -20,6 +20,8 @@ public sealed class BattleSimulator
 
 	private List<DamageEvent> _damageEvents = new();
 	private List<DamageEvent> _damageEventsBuffer = new();
+	private List<UnitDiedEvent> _unitDiedEvents = new();
+	private List<UnitDiedEvent> _unitDiedEventsBuffer = new();
 
 	public BattleState State { get; }
 
@@ -98,8 +100,13 @@ public sealed class BattleSimulator
 				if (u.AttackCooldown <= 0f)
 				{
 					float dmg = u.Def.Damage;
+					bool wasAlive = target!.Hp > 0f;
 					target!.Hp -= dmg;
 					_damageEvents.Add(new DamageEvent(u.Id, target.Id, dmg, IsRanged(u.Def)));
+					if (wasAlive && target.Hp <= 0f)
+					{
+						_unitDiedEvents.Add(new UnitDiedEvent(target.Id, u.Id));
+					}
 					u.AttackCooldown = AttackCooldownFor(u.Def);
 				}
 				continue;
@@ -379,6 +386,15 @@ public sealed class BattleSimulator
 		_damageEvents = _damageEventsBuffer;
 		_damageEventsBuffer = events;
 		_damageEvents.Clear();
+		return events;
+	}
+
+	public IReadOnlyList<UnitDiedEvent> ConsumeUnitDiedEvents()
+	{
+		var events = _unitDiedEvents;
+		_unitDiedEvents = _unitDiedEventsBuffer;
+		_unitDiedEventsBuffer = events;
+		_unitDiedEvents.Clear();
 		return events;
 	}
 }

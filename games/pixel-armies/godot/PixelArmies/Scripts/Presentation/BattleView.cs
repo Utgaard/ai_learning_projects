@@ -20,12 +20,15 @@ public partial class BattleView : Node2D
 	private SimConfig? _cfg;
 
 	private readonly Dictionary<int, Vector2> _unitPositions = new();
+	private readonly Dictionary<int, Vector2> _lastKnownPositions = new();
+	private readonly Dictionary<int, UnitVisual> _lastKnownVisuals = new();
 	private readonly Dictionary<int, float> _hitFlashTimers = new();
 	private readonly Dictionary<int, DamageBucket> _damageBuckets = new();
 	private readonly List<FloatingNumber> _floatingNumbers = new();
 	private readonly List<Tracer> _tracers = new();
 	private readonly List<int> _scratchKeys = new();
 	private readonly HitReactionSystem _hitReactions = new();
+	private readonly DeathEffectSystem _deathEffects = new();
 
 	public float GroundY { get; private set; } = 120f;
 
@@ -36,7 +39,7 @@ public partial class BattleView : Node2D
 		GroundY = groundY;
 	}
 
-	public void Advance(float dt, IReadOnlyList<DamageEvent> damageEvents)
+	public void Advance(float dt, IReadOnlyList<DamageEvent> damageEvents, IReadOnlyList<UnitDiedEvent> deathEvents)
 	{
 		if (_sim == null) return;
 
@@ -48,11 +51,13 @@ public partial class BattleView : Node2D
 		}
 
 		_hitReactions.Advance(dt, damageEvents, _unitPositions);
+		_deathEffects.Advance(dt, deathEvents, _lastKnownPositions, _lastKnownVisuals);
 
 		UpdateFlashTimers(dt);
 		UpdateDamageBuckets(dt);
 		UpdateFloatingNumbers(dt);
 		UpdateTracers(dt);
+		_deathEffects.Update(dt);
 	}
 
 	public override void _Draw()
@@ -80,6 +85,7 @@ public partial class BattleView : Node2D
 		DrawRect(new Rect2(_cfg.BattlefieldLength - barW - 10, GroundY + 20, barW * rPct, barH), Colors.White);
 
 		DrawTracers();
+		_deathEffects.Draw(this);
 
 		// Units as rectangles
 		var font = ThemeDB.FallbackFont;
@@ -148,7 +154,15 @@ public partial class BattleView : Node2D
 			float h = 12 + (u.Def.Tier - 1) * 4;
 			float w = 10 + (u.Def.Tier - 1) * 4;
 			if (u.Def.IsAir) y -= 40f;
-			_unitPositions[u.Id] = GetUnitCenter(u, w, h, y);
+			var center = GetUnitCenter(u, w, h, y);
+			_unitPositions[u.Id] = center;
+			_lastKnownPositions[u.Id] = center;
+			_lastKnownVisuals[u.Id] = new UnitVisual
+			{
+				Width = w,
+				Height = h,
+				Color = u.Side == SimSide.Left ? Colors.Cyan : Colors.Orange
+			};
 		}
 	}
 
@@ -308,5 +322,12 @@ public partial class BattleView : Node2D
 		public Vector2 Start;
 		public Vector2 End;
 		public float Time;
+	}
+
+public struct UnitVisual
+	{
+		public float Width;
+		public float Height;
+		public Color Color;
 	}
 }

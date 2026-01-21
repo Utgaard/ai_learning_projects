@@ -29,6 +29,7 @@ public partial class BattleGameHost : Node2D
 	private Battlefield? _battlefield;
 	private BattleView? _view;
 	private readonly List<DamageEvent> _frameDamageEvents = new();
+	private readonly List<UnitDiedEvent> _frameDeathEvents = new();
 
 	public override void _Ready()
 	{
@@ -70,6 +71,7 @@ public partial class BattleGameHost : Node2D
 		if (_sim == null || _cfg == null || _view == null) return;
 
 		_frameDamageEvents.Clear();
+		_frameDeathEvents.Clear();
 
 		if (!_sim.State.IsOver)
 		{
@@ -79,6 +81,8 @@ public partial class BattleGameHost : Node2D
 				_sim.Step(SimConfig.FixedDt);
 				var events = _sim.ConsumeDamageEvents();
 				if (events.Count > 0) _frameDamageEvents.AddRange(events);
+				var deaths = _sim.ConsumeUnitDiedEvents();
+				if (deaths.Count > 0) _frameDeathEvents.AddRange(deaths);
 				_accum -= SimConfig.FixedDt;
 			}
 		}
@@ -86,6 +90,8 @@ public partial class BattleGameHost : Node2D
 		{
 			var events = _sim.ConsumeDamageEvents();
 			if (events.Count > 0) _frameDamageEvents.AddRange(events);
+			var deaths = _sim.ConsumeUnitDiedEvents();
+			if (deaths.Count > 0) _frameDeathEvents.AddRange(deaths);
 		}
 
 		// Debug prints
@@ -96,7 +102,7 @@ public partial class BattleGameHost : Node2D
 			GD.Print($"t={_sim.State.Time:0.0}s units={_sim.State.Units.Count} LBase={_sim.State.LeftBaseHp:0} RBase={_sim.State.RightBaseHp:0}");
 		}
 
-		_view.Advance((float)delta, _frameDamageEvents);
+		_view.Advance((float)delta, _frameDamageEvents, _frameDeathEvents);
 		UpdateCamera((float)delta);
 		_view.QueueRedraw();
 	}

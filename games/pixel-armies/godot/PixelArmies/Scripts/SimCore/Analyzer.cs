@@ -67,6 +67,7 @@ public static class Analyzer
             {
                 sim.Step(SimConfig.FixedDt);
                 sim.ConsumeDamageEvents();
+                sim.ConsumeUnitDiedEvents();
             }
 
             Side? winner = null;
