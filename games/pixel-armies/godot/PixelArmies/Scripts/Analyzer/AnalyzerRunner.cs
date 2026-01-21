@@ -8,9 +8,10 @@ namespace PixelArmies.Analyzer;
 
 public static class AnalyzerRunner
 {
+	
 	public static bool TryRunFromArgs()
 	{
-		var args = OS.GetCmdlineArgs();
+		var args = OS.GetCmdlineUserArgs();
 
 		bool analyze = false;
 		int runs = 1000;
@@ -18,7 +19,7 @@ public static class AnalyzerRunner
 
 		foreach (var a in args)
 		{
-			if (a == "--analyze") analyze = true;
+			if (a == "analyze") analyze = true;
 			else if (a.StartsWith("--runs=") && int.TryParse(a["--runs=".Length..], out var r)) runs = r;
 			else if (a.StartsWith("--seed=") && int.TryParse(a["--seed=".Length..], out var s)) seed = s;
 		}
