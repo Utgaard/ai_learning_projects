@@ -199,3 +199,38 @@ To support "wildly different" units (e.g., a Medusa that freezes enemies vs. a R
     * `SpawnMinionEffect`: Spawns a new unit at target location.
     * `StatusEffect`: Adds a modifier (Slow, Poison) to the target.
 * **Workflow:** A `UnitDefinition` has a list of `AbilityDefinitions`. When the unit attacks, it iterates through this list and calls `Execute()`. This allows designers to create complex new units just by mixing and matching effects in the Inspector.
+
+
+## 8. Technology Stack
+
+To satisfy the requirements for physics stability, modular data architecture, and headless execution, **Unity** has been selected as the core engine.
+
+### 8.1 Core Engine & Language
+* **Engine:** **Unity 6 (LTS)**
+    * *Rationale:* Industry standard for 2D development with robust support for "Batchmode" (Headless) execution, which is critical for the rapid balancing/simulation requirement.
+* **Language:** **C# (.NET Standard 2.1)**
+    * *Rationale:* Strongly typed language essential for maintaining complex simulation logic and ensuring stability across large, modular codebases.
+
+### 8.2 Physics & Simulation
+* **Physics Engine:** **Unity Physics 2D (Box2D)**
+    * *Rationale:* Provides deterministic-enough 2D collision detection and handling for the "Ragdoll" mechanics and the "Pachinko" spawner system.
+* **Time Management:** **Unity TimeScale API**
+    * *Rationale:* Native support for scaling simulation speed (`Time.timeScale`), allowing battles to be fast-forwarded in Headless Mode without breaking physics integration.
+
+### 8.3 Data & Architecture
+* **Data Container:** **ScriptableObjects**
+    * *Rationale:* Unity's native data format. Allows for the creation of "Army" and "Unit" asset files that can be edited in the Inspector by designers without touching code. Supports hot-swapping data during runtime.
+* **Serialization:** **Newtonsoft.Json (Unity Package)**
+    * *Rationale:* Used for serialization of Tournament Brackets and Match Results (Win/Loss records) to persistent storage, which ScriptableObjects cannot do at runtime.
+
+### 8.4 Visuals & Animation
+* **Animation System:** **Unity 2D Animation (Package)**
+    * *Rationale:* Supports skeletal 2D animation (bones and weights). Crucially, it allows for **Sprite Swapping** at runtime, enabling different units to share animations while looking "wildly different" (e.g., swapping a sword for a laser rifle on the same skeletal rig).
+* **UI Framework:** **Unity UI Toolkit (USS/UXML)**
+    * *Rationale:* CSS-like styling allows for complex, responsive layouts for the Tournament Bracket visualizer that are distinct from the game scene.
+
+### 8.5 Development Tools & Pipeline
+* **Version Control:** **Git** with **Git LFS** (Large File Storage) for art assets.
+* **Build Pipeline:** Custom Editor Scripts to generate two distinct builds:
+    1.  **Client Build:** Full graphics, audio, and user interaction.
+    2.  **Simulation Build:** Server-optimized, headless (No Graphics), auto-executing.
