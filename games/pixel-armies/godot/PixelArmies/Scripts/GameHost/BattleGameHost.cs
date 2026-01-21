@@ -12,6 +12,12 @@ namespace PixelArmies.GameHost;
 public partial class BattleGameHost : Node2D
 {
 	private const float GroundY = 120f;
+	private const float PaddingFactor = 1.18f;
+	private const float MinSpan = 200f;
+	private const float MinZoom = 0.10f;
+	private const float MaxZoom = 1.0f;
+	private const float PosSpeed = 6f;
+	private const float ZoomSpeed = 5f;
 
 	private BattleSimulator? _sim;
 	private SimConfig? _cfg;
@@ -51,9 +57,8 @@ public partial class BattleGameHost : Node2D
 		_cam = new Camera2D
 		{
 			Enabled = true,
-			PositionSmoothingEnabled = true,
-			PositionSmoothingSpeed = 6f,
-			Zoom = new Vector2(1.2f, 1.2f), // tweak later
+			PositionSmoothingEnabled = false,
+			Zoom = new Vector2(MaxZoom, MaxZoom),
 		};
 		AddChild(_cam);
 
@@ -92,31 +97,50 @@ public partial class BattleGameHost : Node2D
 		}
 
 		_view.Advance((float)delta, _frameDamageEvents);
-		UpdateCamera();
+		UpdateCamera((float)delta);
 		_view.QueueRedraw();
 	}
 
-	private void UpdateCamera()
+	private void UpdateCamera(float dt)
 	{
 		if (_sim == null || _cfg == null || _cam == null) return;
 
 		// Find foremost unit for each side (closest to enemy base)
-		float leftForemost = 0f;
-		float rightForemost = _cfg.BattlefieldLength;
+		float leftBaseX = 0f;
+		float rightBaseX = _cfg.BattlefieldLength;
+		float leftFrontX = leftBaseX;
+		float rightFrontX = rightBaseX;
 
 		foreach (var u in _sim.State.Units)
 		{
 			if (!u.Alive) continue;
 
 			if (u.Side == SimSide.Left)
-				leftForemost = Mathf.Max(leftForemost, u.X);
+				leftFrontX = Mathf.Max(leftFrontX, u.X);
 			else
-				rightForemost = Mathf.Min(rightForemost, u.X);
+				rightFrontX = Mathf.Min(rightFrontX, u.X);
 		}
 
-		float mid = (leftForemost + rightForemost) * 0.5f;
+		float baseSpan = rightBaseX - leftBaseX;
+		float frontSpan = Mathf.Max(MinSpan, rightFrontX - leftFrontX);
+		float t = 1f - Mathf.Clamp(frontSpan / Mathf.Max(1f, baseSpan), 0f, 1f);
 
-		// World coordinates: we'll map x -> pixel x directly for now
-		_cam.Position = new Vector2(mid, 0f);
+		float baseCenter = (leftBaseX + rightBaseX) * 0.5f;
+		float frontCenter = (leftFrontX + rightFrontX) * 0.5f;
+		float targetCenterX = Mathf.Lerp(baseCenter, frontCenter, t);
+		float targetSpan = Mathf.Lerp(baseSpan, frontSpan, t);
+
+		float viewportWidth = GetViewportRect().Size.X;
+		float desiredVisibleWidth = Mathf.Max(1f, targetSpan * PaddingFactor);
+		float zoomX = viewportWidth / desiredVisibleWidth;
+		zoomX = Mathf.Clamp(zoomX, MinZoom, MaxZoom);
+		var targetZoom = new Vector2(zoomX, zoomX);
+		var targetPos = new Vector2(targetCenterX, 0f);
+
+		float posAlpha = 1f - Mathf.Exp(-PosSpeed * dt);
+		float zoomAlpha = 1f - Mathf.Exp(-ZoomSpeed * dt);
+
+		_cam.Position = _cam.Position.Lerp(targetPos, posAlpha);
+		_cam.Zoom = _cam.Zoom.Lerp(targetZoom, zoomAlpha);
 	}
 }
