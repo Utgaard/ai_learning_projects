@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace PixelArmies.SimCore;
 
@@ -9,6 +10,8 @@ public sealed class BattleSimulator
 {
 	private const float RangedMinRange = 80f;
 	private const float MinAttackRate = 0.1f;
+	private readonly DebugSettings _debugSettings;
+	private float _nextDebugPrintTime;
 
 	private readonly SimConfig _cfg;
 	private readonly ArmyDef _leftArmy;
@@ -25,7 +28,7 @@ public sealed class BattleSimulator
 
 	public BattleState State { get; }
 
-	public BattleSimulator(SimConfig cfg, ArmyDef leftArmy, ArmyDef rightArmy, int seed)
+	public BattleSimulator(SimConfig cfg, ArmyDef leftArmy, ArmyDef rightArmy, int seed, DebugSettings debugSettings = default)
 	{
 		_cfg = cfg;
 		_leftArmy = leftArmy;
@@ -36,6 +39,11 @@ public sealed class BattleSimulator
 
 		_leftSpawner = new Spawner(Side.Left, _leftArmy, _cfg, _rng);
 		_rightSpawner = new Spawner(Side.Right, _rightArmy, _cfg, _rng);
+
+		_debugSettings = debugSettings.Enabled && debugSettings.IntervalSeconds > 0f
+			? debugSettings
+			: DebugSettings.Disabled;
+		_nextDebugPrintTime = _debugSettings.Enabled ? _debugSettings.IntervalSeconds : float.PositiveInfinity;
 	}
 
 	public void Step(float dt)
@@ -175,6 +183,11 @@ public sealed class BattleSimulator
 		for (int i = units.Count - 1; i >= 0; i--)
 		{
 			if (!units[i].Alive) units.RemoveAt(i);
+		}
+
+		if (_debugSettings.Enabled && State.Time >= _nextDebugPrintTime)
+		{
+			PrintDebugLines();
 		}
 	}
 
@@ -396,5 +409,28 @@ public sealed class BattleSimulator
 		_unitDiedEventsBuffer = events;
 		_unitDiedEvents.Clear();
 		return events;
+	}
+
+	private void PrintDebugLines()
+	{
+		while (State.Time >= _nextDebugPrintTime)
+		{
+			var snap = State.BuildDebugSnapshot();
+			string prefix = _debugSettings.Prefix ?? "";
+			string line = string.Format(
+				CultureInfo.InvariantCulture,
+				"{0}t={1,5:0.0}  L base={2,4:0}  units={3}  tiers=[{4},{5},{6},{7}]  |  R base={8,4:0}  units={9}  tiers=[{10},{11},{12},{13}]",
+				prefix,
+				_nextDebugPrintTime,
+				snap.LeftBaseHp,
+				snap.LeftTotal,
+				snap.L1, snap.L2, snap.L3, snap.L4,
+				snap.RightBaseHp,
+				snap.RightTotal,
+				snap.R1, snap.R2, snap.R3, snap.R4);
+
+			Console.WriteLine(line);
+			_nextDebugPrintTime += _debugSettings.IntervalSeconds;
+		}
 	}
 }

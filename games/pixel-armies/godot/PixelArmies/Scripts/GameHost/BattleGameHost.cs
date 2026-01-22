@@ -21,6 +21,7 @@ public partial class BattleGameHost : Node2D
 
 	private BattleSimulator? _sim;
 	private SimConfig? _cfg;
+	private DebugSettings _debugSettings = DebugSettings.Disabled;
 
 	private float _accum;
 
@@ -36,7 +37,7 @@ public partial class BattleGameHost : Node2D
 
 		var left = DemoArmies.LeftBasic();
 		var right = DemoArmies.RightBasic();
-		_sim = new BattleSimulator(_cfg, left, right, seed: 12345);
+		_sim = new BattleSimulator(_cfg, left, right, seed: 12345, _debugSettings);
 
 		// Battlefield background
 		_battlefield = new Battlefield
@@ -63,6 +64,11 @@ public partial class BattleGameHost : Node2D
 		AddChild(_cam);
 
 		GD.Print("Started demo battle sim (visual debug).");
+	}
+
+	public void ConfigureDebug(DebugSettings settings)
+	{
+		_debugSettings = settings;
 	}
 
 	public override void _Process(double delta)

@@ -12,6 +12,8 @@ public partial class Main : Node2D
 	{
 		GD.Print("Pixel Armies booting...");
 
+		var debugArgs = DebugArgs.Parse(OS.GetCmdlineUserArgs());
+
 		if (AnalyzerRunner.TryRunFromArgs())
 		{
 			GetTree().Quit();
@@ -20,6 +22,7 @@ public partial class Main : Node2D
 
 		GD.Print("Started visual mode (game host)");
 		var host = new BattleGameHost();
+		host.ConfigureDebug(debugArgs.ToDebugSettings());
 		AddChild(host);
 	}
 }

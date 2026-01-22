@@ -14,6 +14,7 @@ public static class AnalyzerRunner
 	public static bool TryRunFromArgs()
 	{
 		var args = OS.GetCmdlineUserArgs();
+		var debugArgs = DebugArgs.Parse(args);
 
 		bool analyze = false;
 		int runs = 1000;
@@ -63,7 +64,9 @@ public static class AnalyzerRunner
 				double elapsed = stopwatch.Elapsed.TotalSeconds;
 				float pct = total > 0 ? (100f * current / total) : 100f;
 				GD.Print($"Progress: {current}/{total} ({pct:0.0}%) elapsed={elapsed:0.0}s");
-			});
+			},
+			debugArgs.ToDebugSettings(),
+			includeRunPrefix: true);
 
 		GD.Print(stats.ToString());
 		return true;

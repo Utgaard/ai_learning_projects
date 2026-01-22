@@ -21,7 +21,7 @@ project/assembly_name="PixelArmies"
 
 [editor]
 
-run/main_run_args="analyze"
+run/main_run_args="--debug"
 
 [rendering]
 

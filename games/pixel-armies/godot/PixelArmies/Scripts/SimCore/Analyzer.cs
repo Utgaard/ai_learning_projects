@@ -48,7 +48,9 @@ public static class Analyzer
         int seedBase,
         float maxSeconds,
         int progressInterval = 0,
-        Action<int, int>? progressCallback = null)
+        Action<int, int>? progressCallback = null,
+        DebugSettings debugSettings = default,
+        bool includeRunPrefix = false)
     {
         var stats = new MatchupStats { Runs = runs };
 
@@ -59,7 +61,12 @@ public static class Analyzer
         for (int i = 0; i < runs; i++)
         {
             int seed = seedBase + i;
-            var sim = new BattleSimulator(cfg, left, right, seed);
+            var simDebug = debugSettings.Enabled ? debugSettings : DebugSettings.Disabled;
+            if (simDebug.Enabled && includeRunPrefix)
+            {
+                simDebug = simDebug.WithPrefix($"Run {i + 1}/{runs} ");
+            }
+            var sim = new BattleSimulator(cfg, left, right, seed, simDebug);
 
             // Hard cap to avoid infinite battles in early tuning
             float maxTime = maxSeconds > 0f ? maxSeconds : 240f;
