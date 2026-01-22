@@ -17,8 +17,8 @@ public sealed class SimConfig
 
     // Spawning / escalation
     public float StartingPower = 10f;
-    public float PowerGainPerSecond = 6f;     // escalation pacing knob
-    public float SpawnTryInterval = 0.35f;    // how often we *attempt* to spawn
+    public float PowerPerSecond = 6f;
+    public float SpawnTryInterval = 0.35f;    // legacy (unused)
     public float Tier2Time = 20f;
     public float Tier3Time = 45f;
     public float Tier4Time = 80f;

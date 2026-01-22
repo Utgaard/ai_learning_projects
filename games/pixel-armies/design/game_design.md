@@ -87,6 +87,13 @@ This game explicitly avoids:
 - based on a cool visualization at the top of the screen for each randomizer, that for each determines which units spawn. more powerful units require more "energy" to spawn. 
 - Randomizer visualization is informational only and not interactive
 
+### Spawning & Economy
+- Each side has a shared power pool that increases over time.
+- Power is routed into one selected tier bucket at a time (1..unlocked tier).
+- The bucket fills toward a target unit cost; when it reaches the cost, that unit spawns and any overflow carries to the next target.
+- Tier selection is deterministic and weighted among unlocked tiers.
+- Tier unlocking is time-based (T2=20s, T3=45s, T4=80s).
+
 
 ### Combat Resolution
 - Simple physical interactions

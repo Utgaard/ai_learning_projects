@@ -10,8 +10,10 @@ public sealed class Spawner
 	private readonly SimConfig _cfg;
 	private readonly Rng _rng;
 
-	private float _power;
-	private float _spawnTimer;
+	private float _powerPool;
+	private int _currentBucketTier;
+	private UnitDef? _currentBucketUnit;
+	private float _currentBucketProgress;
 
 	public Spawner(Side side, ArmyDef army, SimConfig cfg, Rng rng)
 	{
@@ -20,45 +22,39 @@ public sealed class Spawner
 		_cfg = cfg;
 		_rng = rng;
 
-		_power = cfg.StartingPower;
-		_spawnTimer = 0f;
+		_powerPool = cfg.StartingPower;
+		_currentBucketTier = 1;
+		_currentBucketUnit = null;
+		_currentBucketProgress = 0f;
 	}
 
 	public void Step(BattleState s, float dt)
 	{
-		_power += _cfg.PowerGainPerSecond * dt;
-		_spawnTimer -= dt;
-
-		if (_spawnTimer > 0f) return;
-		_spawnTimer = _cfg.SpawnTryInterval;
-
-		// If we can't afford even the cheapest unit, do nothing this tick
-		if (_power < _army.MinCost()) return;
+		_powerPool += _cfg.PowerPerSecond * dt;
 
 		int unlockedTier = _cfg.UnlockedTierForTime(s.Time);
-		int chosenTier = PickTier(unlockedTier);
 
-		UnitDef? chosen = null;
-		for (int tier = chosenTier; tier >= 1; tier--)
+		EnsureBucketTarget(unlockedTier);
+
+		float alloc = _powerPool;
+		if (alloc <= 0f) return;
+		_powerPool -= alloc;
+		_currentBucketProgress += alloc;
+
+		int spawns = 0;
+		while (_currentBucketUnit != null &&
+			_currentBucketProgress >= _currentBucketUnit.Value.Cost &&
+			spawns < 5)
 		{
-			var candidates = new List<(UnitDef item, float weight)>();
-			foreach (var u in _army.Units)
-			{
-				if (u.Tier != tier) continue;
-				if (u.Cost > _power) continue;
-				candidates.Add((u, 1f));
-			}
-			if (candidates.Count == 0) continue;
+			var unit = _currentBucketUnit.Value;
+			_currentBucketProgress -= unit.Cost;
 
-			chosen = _rng.PickWeighted(candidates);
-			break;
+			float spawnX = _side == Side.Left ? 0f : _cfg.BattlefieldLength;
+			s.Units.Add(new UnitState(s.NextUnitId++, _side, unit, spawnX));
+			spawns++;
+
+			SelectNewBucketTarget(unlockedTier);
 		}
-		if (chosen == null) return;
-
-		_power -= chosen.Value.Cost;
-
-		float spawnX = _side == Side.Left ? 0f : _cfg.BattlefieldLength;
-		s.Units.Add(new UnitState(s.NextUnitId++, _side, chosen.Value, spawnX));
 	}
 
 	private static float TierWeight(int tier)
@@ -82,5 +78,35 @@ public sealed class Spawner
 			weighted.Add((tier, TierWeight(tier)));
 		}
 		return _rng.PickWeighted(weighted);
+	}
+
+	private void EnsureBucketTarget(int unlockedTier)
+	{
+		if (_currentBucketTier > unlockedTier) _currentBucketTier = unlockedTier;
+		if (_currentBucketUnit == null || _currentBucketUnit.Value.Tier != _currentBucketTier)
+		{
+			SelectNewBucketTarget(unlockedTier);
+		}
+	}
+
+	private void SelectNewBucketTarget(int unlockedTier)
+	{
+		int chosenTier = PickTier(unlockedTier);
+		for (int tier = chosenTier; tier >= 1; tier--)
+		{
+			var candidates = new List<UnitDef>();
+			for (int i = 0; i < _army.Units.Count; i++)
+			{
+				var u = _army.Units[i];
+				if (u.Tier == tier) candidates.Add(u);
+			}
+			if (candidates.Count == 0) continue;
+
+			_currentBucketTier = tier;
+			_currentBucketUnit = candidates[_rng.NextInt(0, candidates.Count)];
+			return;
+		}
+
+		throw new InvalidOperationException($"Army '{_army.Name}' has no units in tiers 1..{unlockedTier}");
 	}
 }
