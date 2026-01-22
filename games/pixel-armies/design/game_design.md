@@ -235,6 +235,78 @@ Rationale:
 - Headless simulation fidelity vs performance tradeoffs (especially terrain deformation).
 
 ---
+## Project Snapshot (Living Section)
+
+### Current Architecture & Assumptions
+
+**High-level structure**
+- **SimCore**
+  - Deterministic, headless-capable battle simulation
+  - No Godot types or rendering logic
+  - Owns: units, combat resolution, spawning, escalation, base HP
+- **Presentation**
+  - Purely visual interpretation of SimCore state and events
+  - Owns: camera, hit reactions, death effects, damage numbers, tracers, particles
+  - Visual randomness is allowed; simulation outcomes must not change
+- **GameHost**
+  - Orchestrates SimCore stepping and forwards events to Presentation
+  - Bridges sim time ↔ frame time
+- **Analyzer**
+  - Runs SimCore headlessly for many iterations
+  - Produces statistics (wins, draws, timeouts, stomp rate, etc.)
+  - Must stay fast and avoid excessive logging
+
+**Core assumptions**
+- The player is a spectator (“god view”); no interaction during battles
+- Battles are expected to resolve eventually via escalation and line-breakers
+- Visual clarity and spectacle are prioritized over realism
+- All gameplay logic must be testable in headless analyzer mode
+- Presentation must never affect simulation results
+
+---
+
+### Non-Goals (Explicit)
+
+- No micromanagement, unit control, or base building
+- No fog of war
+- No multiplayer
+- No real physics simulation (ragdolls, rigid bodies, etc.)
+- No attempt at historical realism or balance symmetry
+- No requirement for competitive fairness (this is a simulator/spectacle)
+
+---
+
+### Current Known Issues / Risks
+
+- **Stalemates**: Dense tier-1 melee formations can still stall indefinitely if higher tiers do not appear or are too weak
+- **Escalation visibility**: Need reliable confirmation (via debug readout) that tiers 2–4 unlock and spawn as intended
+- **Balance immaturity**: Current armies are placeholders; analyzer shows frequent draws under timeout
+- **Performance sensitivity**: Excessive debug logging can significantly slow analyzer runs
+- **Content coupling**: Some demo content assumptions are still hardcoded rather than data-driven
+
+---
+
+### Next 3 Planned Milestones
+
+1. **Reliable Escalation & Debug Visibility**
+   - Time-based tier unlocking (tiers 2–4)
+   - Tier-weighted spawning
+   - Periodic debug readout (units per tier, base HP, sim time)
+
+2. **Line-Breaker Mechanics**
+   - Ensure higher tiers actively break stalemates:
+     - Reach units
+     - Ranged units
+     - Cleave / AoE / on-death effects
+   - Strong, readable visuals for these effects
+
+3. **Content Scalability**
+   - Move armies and unit definitions to data (e.g. JSON or resources)
+   - Enable rapid creation of many visually and mechanically distinct armies
+   - Keep SimCore generic and content-agnostic
+
+---
+
 
 ## 7. Change Log
 - 2026-01-18: Aligned project folders with architecture layers
