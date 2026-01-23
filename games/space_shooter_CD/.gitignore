@@ -1,0 +1,4 @@
+# Ignore legacy asset collection and macOS metadata
+Legacy Collection/
+__MACOSX/
+.DS_Store

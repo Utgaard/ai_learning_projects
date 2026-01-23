@@ -55,41 +55,41 @@ A classic top-down space shooter with pixel art, simple controls, and escalating
 ## Asset Links (Planned Usage)
 
 ### Player Ship
-- `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShooter/Space Shooter files/ship/` (if present)
+- `assets/player/space_shooter/sprites/`
 - Fallback:
-  - `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShipShooter/spritesheets/ship.png`
-  - `Legacy Collection/Legacy Collection/Assets/Characters/top-down-shooter-ship/spritesheets/red/ship-01.png`
+  - `assets/player/space_ship_shooter/ship.png`
+  - `assets/player/top_down_shooter_ship/ship-01.png`
 
 ### Enemies
-- `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShooter/Space Shooter files/enemy/`
+- `assets/enemies/space_shooter/`
 - Fallback:
-  - `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShipShooter/spritesheets/enemy-small.png`
-  - `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShipShooter/spritesheets/enemy-medium.png`
-  - `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShipShooter/spritesheets/enemy-big.png`
+  - `assets/enemies/space_ship_shooter/enemy-small.png`
+  - `assets/enemies/space_ship_shooter/enemy-medium.png`
+  - `assets/enemies/space_ship_shooter/enemy-big.png`
 
 ### Projectiles
-- `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShipShooter/spritesheets/laser-bolts.png`
+- `assets/projectiles/space_ship_shooter/laser-bolts.png`
 - Fallback:
-  - `Legacy Collection/Legacy Collection/Assets/Packs/Sewers pack files/Sprites/Misc/Bullet/bullet.png`
+  - `assets/projectiles/sewers/bullet.png`
 
 ### Explosions
-- `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShooter/Space Shooter files/explosion/`
+- `assets/explosions/space_shooter/`
 - Fallback:
-  - `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShipShooter/spritesheets/explosion.png`
-  - `Legacy Collection/Legacy Collection/Assets/Misc/Explosion/sprites/`
+  - `assets/explosions/space_ship_shooter/explosion.png`
+  - `assets/explosions/misc_explosion/sprites/`
 
 ### Background
-- `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShooter/Space Shooter files/background/layered/bg-stars.png`
+- `assets/backgrounds/space_shooter/bg-stars.png`
 - Fallback:
-  - `Legacy Collection/Legacy Collection/Assets/Environments/space_background_pack/Blue Version/layered/blue-with-stars.png`
+  - `assets/backgrounds/space_background_pack/blue-with-stars.png`
 
 ### Audio
 - Laser:
-  - `Legacy Collection/Legacy Collection/Assets/Packs/grotto_escape_pack/Base pack/sounds/laser.wav`
-  - `Legacy Collection/Legacy Collection/Assets/Packs/Sewers pack files/Sounds/rainbowlaser.ogg`
+  - `assets/audio/grotto/laser.wav`
+  - `assets/audio/sewers/rainbowlaser.ogg`
 - Explosion:
-  - `Legacy Collection/Legacy Collection/Assets/Packs/SpaceShooter/Space Shooter files/Sound FX/explosion.wav`
-  - `Legacy Collection/Legacy Collection/Assets/Packs/Sewers pack files/Sounds/explosion.wav`
+  - `assets/audio/space_shooter/explosion.wav`
+  - `assets/audio/sewers/explosion.wav`
 
 ## Decisions (Task #1)
 - Resolution: 320x180 base, integer scaled
