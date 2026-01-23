@@ -122,3 +122,96 @@ Battle resolution is expected to rely on:
 - Ranged units
 - Cleave / AoE abilities
 - Escalation pressure
+
+## Unit Movement & Targeting (Extension)
+
+### Movement Class
+
+Each unit has a **MovementClass** that defines how it interacts with allies and enemies during movement.
+
+**MovementClass values:**
+- **Ground**
+  - Respects ally formation, spacing, and vanguard rules
+  - Forms and maintains frontlines
+  - Can be blocked by allied units
+- **Air**
+  - Ignores ally blocking and formation
+  - Flies past allied ground units freely
+  - Still respects enemy engagement distance (stops to attack when in contact)
+  - Visually represents aerial or highly mobile units
+
+**Design intent:**
+- Air units act as interceptors, raiders, or line-bypass units
+- Ground units define the main battle line and density
+- Air units increase vertical and tactical variety without adding complex physics
+
+MovementClass affects **movement and spacing only**; combat resolution rules remain unchanged.
+
+---
+
+### Targeting Policy
+
+Each unit has a **TargetingPolicy** that determines how it selects which enemy to attack.
+
+Targeting policies are deterministic and evaluated every time a unit selects or updates its target.
+
+**Initial TargetingPolicy values:**
+
+- **Frontmost**
+  - Targets the first enemy encountered in the unit’s advance direction
+  - Left-side units target the enemy with the smallest X position
+  - Right-side units target the enemy with the largest X position
+  - Default for air units and frontline attackers
+
+- **ClosestInRange**
+  - Targets the closest enemy that is currently within attack range
+  - If no enemies are in range, movement continues toward the enemy side
+
+- **Closest**
+  - Targets the nearest enemy by distance
+  - Used primarily to decide movement direction
+  - May be combined with other policies in future extensions
+
+**Design intent:**
+- TargetingPolicy defines *preference*, not randomness
+- Different unit types can feel tactically distinct without micromanagement
+- The system is intentionally simple now but extensible later
+
+---
+
+### Future Targeting Extensions (Planned, Not Implemented)
+
+The targeting system is designed to support future extensions such as:
+- Prefer low-HP targets
+- Prefer ranged or air units
+- Prefer highest tier units
+- Prefer base over units (siege or suicide units)
+
+These extensions may use scoring-based selection but are explicitly **out of scope** for the current phase.
+
+---
+
+### Interaction Between Movement and Targeting
+
+- Air units typically use:
+  - `MovementClass = Air`
+  - `TargetingPolicy = Frontmost`
+- Ground ranged units may use:
+  - `MovementClass = Ground`
+  - `TargetingPolicy = ClosestInRange`
+
+This separation allows:
+- Clean mental models
+- Clear visual storytelling
+- Independent tuning of movement and combat behavior
+
+---
+
+### Non-Goals (Reiterated)
+
+- No manual target selection by the player
+- No per-unit AI scripting
+- No physics-based collision for air units
+- No pathfinding beyond lane-based advance
+
+All behavior must remain deterministic and compatible with headless simulation.
