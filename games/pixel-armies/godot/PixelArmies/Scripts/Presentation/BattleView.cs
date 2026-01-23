@@ -15,6 +15,10 @@ public partial class BattleView : Node2D
 	private const float DamageNumberLifetime = 1.2f;
 	private const float DamageNumberRiseSpeed = 35f;
 	private const float TracerLifetime = 0.16f;
+	private const float AirAltitudeBase = -40f;
+	private const float AirAltitudeStep = 2f;
+	private const float AirBobAmplitude = 6f;
+	private const float AirBobSpeed = 3.2f;
 
 	private BattleSimulator? _sim;
 	private SimConfig? _cfg;
@@ -104,7 +108,7 @@ public partial class BattleView : Node2D
 			h += (u.Def.Tier - 1) * 4;
 
 			if (u.Def.MovementClass == MovementClass.Air)
-				y -= 40f; // air height
+				y += AirAltitudeBase + GetAirJitter(u.Id) + GetAirBob(u.Id, _sim.State.Time);
 
 			// Left units slightly different than right
 			var c = u.Side == SimSide.Left ? Colors.Cyan : Colors.Orange;
@@ -169,7 +173,7 @@ public partial class BattleView : Node2D
 			float y = GroundY - 12;
 			float h = 12 + (u.Def.Tier - 1) * 4;
 			float w = 10 + (u.Def.Tier - 1) * 4;
-			if (u.Def.MovementClass == MovementClass.Air) y -= 40f;
+			if (u.Def.MovementClass == MovementClass.Air) y += AirAltitudeBase + GetAirJitter(u.Id) + GetAirBob(u.Id, _sim.State.Time);
 			var center = GetUnitCenter(u, w, h, y);
 			_unitPositions[u.Id] = center;
 			_lastKnownPositions[u.Id] = center;
@@ -185,6 +189,18 @@ public partial class BattleView : Node2D
 	private static Vector2 GetUnitCenter(UnitState u, float w, float h, float y)
 	{
 		return new Vector2(u.X, y - h * 0.5f);
+	}
+
+	private static float GetAirJitter(int unitId)
+	{
+		int slot = unitId % 5;
+		return (slot - 2) * AirAltitudeStep;
+	}
+
+	private static float GetAirBob(int unitId, float timeSeconds)
+	{
+		float phase = (unitId % 7) * 0.7f;
+		return Mathf.Sin(timeSeconds * AirBobSpeed + phase) * AirBobAmplitude;
 	}
 
 	private void ApplyDamageEvents(IReadOnlyList<DamageEvent> damageEvents)

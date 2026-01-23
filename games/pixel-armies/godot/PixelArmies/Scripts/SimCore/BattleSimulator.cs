@@ -63,6 +63,8 @@ public sealed class BattleSimulator
 		var rightUnits = new List<UnitState>();
 		var leftGround = new List<UnitState>();
 		var rightGround = new List<UnitState>();
+		var leftAir = new List<UnitState>();
+		var rightAir = new List<UnitState>();
 		for (int i = 0; i < units.Count; i++)
 		{
 			var u = units[i];
@@ -75,18 +77,27 @@ public sealed class BattleSimulator
 				if (u.Side == Side.Left) leftGround.Add(u);
 				else rightGround.Add(u);
 			}
+			else
+			{
+				if (u.Side == Side.Left) leftAir.Add(u);
+				else rightAir.Add(u);
+			}
 		}
 
 		leftUnits.Sort(CompareByXThenId);
 		rightUnits.Sort(CompareByXThenId);
 		leftGround.Sort(CompareByXThenId);
 		rightGround.Sort(CompareByXThenId);
+		leftAir.Sort(CompareByXThenId);
+		rightAir.Sort(CompareByXThenId);
 
 		var formationMulByUnitId = BuildFormationMultipliers(leftUnits, rightUnits);
 		var allySpacingMulByUnitId = BuildAllySpacingMultipliers(leftUnits, rightUnits, formationMulByUnitId);
 
 		EnforceSpacing(leftGround, isLeftSide: true, allySpacingMulByUnitId);
 		EnforceSpacing(rightGround, isLeftSide: false, allySpacingMulByUnitId);
+		EnforceAirSpacing(leftAir, formationMulByUnitId);
+		EnforceAirSpacing(rightAir, formationMulByUnitId);
 
 		var leftIndex = new Dictionary<int, int>(leftGround.Count);
 		var rightIndex = new Dictionary<int, int>(rightGround.Count);
@@ -188,6 +199,8 @@ public sealed class BattleSimulator
 		rightUnits.Clear();
 		leftGround.Clear();
 		rightGround.Clear();
+		leftAir.Clear();
+		rightAir.Clear();
 		for (int i = 0; i < units.Count; i++)
 		{
 			var u = units[i];
@@ -200,15 +213,24 @@ public sealed class BattleSimulator
 				if (u.Side == Side.Left) leftGround.Add(u);
 				else rightGround.Add(u);
 			}
+			else
+			{
+				if (u.Side == Side.Left) leftAir.Add(u);
+				else rightAir.Add(u);
+			}
 		}
 		leftUnits.Sort(CompareByXThenId);
 		rightUnits.Sort(CompareByXThenId);
 		leftGround.Sort(CompareByXThenId);
 		rightGround.Sort(CompareByXThenId);
+		leftAir.Sort(CompareByXThenId);
+		rightAir.Sort(CompareByXThenId);
 		formationMulByUnitId = BuildFormationMultipliers(leftUnits, rightUnits);
 		allySpacingMulByUnitId = BuildAllySpacingMultipliers(leftUnits, rightUnits, formationMulByUnitId);
 		EnforceSpacing(leftGround, isLeftSide: true, allySpacingMulByUnitId);
 		EnforceSpacing(rightGround, isLeftSide: false, allySpacingMulByUnitId);
+		EnforceAirSpacing(leftAir, formationMulByUnitId);
+		EnforceAirSpacing(rightAir, formationMulByUnitId);
 
 		// Cleanup dead units occasionally (cheap)
 		// (Could do each step for now)
@@ -511,6 +533,33 @@ public sealed class BattleSimulator
 		_unitDiedEventsBuffer = events;
 		_unitDiedEvents.Clear();
 		return events;
+	}
+
+	private void EnforceAirSpacing(List<UnitState> airUnits, Dictionary<int, float> spacingMulByUnitId)
+	{
+		for (int i = 0; i < airUnits.Count - 1; i++)
+		{
+			var a = airUnits[i];
+			float aRadius = UnitSpacingRadius(a, spacingMulByUnitId);
+
+			for (int j = i + 1; j < airUnits.Count; j++)
+			{
+				var b = airUnits[j];
+				float bRadius = UnitSpacingRadius(b, spacingMulByUnitId);
+				float minGap = aRadius + bRadius;
+				float dx = b.X - a.X;
+				if (Math.Abs(dx) >= minGap) continue;
+
+				float move = (minGap - Math.Abs(dx)) * 0.5f;
+				float dir = dx >= 0f ? 1f : -1f;
+
+				a.X = Math.Clamp(a.X - move * dir, 0f, _cfg.BattlefieldLength);
+				b.X = Math.Clamp(b.X + move * dir, 0f, _cfg.BattlefieldLength);
+
+				airUnits[i] = a;
+				airUnits[j] = b;
+			}
+		}
 	}
 
 	private void PrintDebugLines()
