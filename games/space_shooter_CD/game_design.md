@@ -55,41 +55,41 @@ A classic top-down space shooter with pixel art, simple controls, and escalating
 ## Asset Links (Planned Usage)
 
 ### Player Ship
-- `assets/player/space_shooter/sprites/`
+- `public/assets/player/space_shooter/sprites/`
 - Fallback:
-  - `assets/player/space_ship_shooter/ship.png`
-  - `assets/player/top_down_shooter_ship/ship-01.png`
+  - `public/assets/player/space_ship_shooter/ship.png`
+  - `public/assets/player/top_down_shooter_ship/ship-01.png`
 
 ### Enemies
-- `assets/enemies/space_shooter/`
+- `public/assets/enemies/space_shooter/`
 - Fallback:
-  - `assets/enemies/space_ship_shooter/enemy-small.png`
-  - `assets/enemies/space_ship_shooter/enemy-medium.png`
-  - `assets/enemies/space_ship_shooter/enemy-big.png`
+  - `public/assets/enemies/space_ship_shooter/enemy-small.png`
+  - `public/assets/enemies/space_ship_shooter/enemy-medium.png`
+  - `public/assets/enemies/space_ship_shooter/enemy-big.png`
 
 ### Projectiles
-- `assets/projectiles/space_ship_shooter/laser-bolts.png`
+- `public/assets/projectiles/space_ship_shooter/laser-bolts.png`
 - Fallback:
-  - `assets/projectiles/sewers/bullet.png`
+  - `public/assets/projectiles/sewers/bullet.png`
 
 ### Explosions
-- `assets/explosions/space_shooter/`
+- `public/assets/explosions/space_shooter/`
 - Fallback:
-  - `assets/explosions/space_ship_shooter/explosion.png`
-  - `assets/explosions/misc_explosion/sprites/`
+  - `public/assets/explosions/space_ship_shooter/explosion.png`
+  - `public/assets/explosions/misc_explosion/sprites/`
 
 ### Background
-- `assets/backgrounds/space_shooter/bg-stars.png`
+- `public/assets/backgrounds/space_shooter/bg-stars.png`
 - Fallback:
-  - `assets/backgrounds/space_background_pack/blue-with-stars.png`
+  - `public/assets/backgrounds/space_background_pack/blue-with-stars.png`
 
 ### Audio
 - Laser:
-  - `assets/audio/grotto/laser.wav`
-  - `assets/audio/sewers/rainbowlaser.ogg`
+  - `public/assets/audio/grotto/laser.wav`
+  - `public/assets/audio/sewers/rainbowlaser.ogg`
 - Explosion:
-  - `assets/audio/space_shooter/explosion.wav`
-  - `assets/audio/sewers/explosion.wav`
+  - `public/assets/audio/space_shooter/explosion.wav`
+  - `public/assets/audio/sewers/explosion.wav`
 
 ## Decisions (Task #1)
 - Resolution: 320x180 base, integer scaled
