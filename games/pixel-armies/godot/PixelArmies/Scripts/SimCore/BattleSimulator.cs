@@ -61,27 +61,37 @@ public sealed class BattleSimulator
 		var units = State.Units;
 		var leftUnits = new List<UnitState>();
 		var rightUnits = new List<UnitState>();
+		var leftGround = new List<UnitState>();
+		var rightGround = new List<UnitState>();
 		for (int i = 0; i < units.Count; i++)
 		{
 			var u = units[i];
 			if (!u.Alive) continue;
 			if (u.Side == Side.Left) leftUnits.Add(u);
 			else rightUnits.Add(u);
+
+			if (u.Def.MovementClass == MovementClass.Ground)
+			{
+				if (u.Side == Side.Left) leftGround.Add(u);
+				else rightGround.Add(u);
+			}
 		}
 
 		leftUnits.Sort(CompareByXThenId);
 		rightUnits.Sort(CompareByXThenId);
+		leftGround.Sort(CompareByXThenId);
+		rightGround.Sort(CompareByXThenId);
 
 		var formationMulByUnitId = BuildFormationMultipliers(leftUnits, rightUnits);
 		var allySpacingMulByUnitId = BuildAllySpacingMultipliers(leftUnits, rightUnits, formationMulByUnitId);
 
-		EnforceSpacing(leftUnits, isLeftSide: true, allySpacingMulByUnitId);
-		EnforceSpacing(rightUnits, isLeftSide: false, allySpacingMulByUnitId);
+		EnforceSpacing(leftGround, isLeftSide: true, allySpacingMulByUnitId);
+		EnforceSpacing(rightGround, isLeftSide: false, allySpacingMulByUnitId);
 
-		var leftIndex = new Dictionary<int, int>(leftUnits.Count);
-		var rightIndex = new Dictionary<int, int>(rightUnits.Count);
-		for (int i = 0; i < leftUnits.Count; i++) leftIndex[leftUnits[i].Id] = i;
-		for (int i = 0; i < rightUnits.Count; i++) rightIndex[rightUnits[i].Id] = i;
+		var leftIndex = new Dictionary<int, int>(leftGround.Count);
+		var rightIndex = new Dictionary<int, int>(rightGround.Count);
+		for (int i = 0; i < leftGround.Count; i++) leftIndex[leftGround[i].Id] = i;
+		for (int i = 0; i < rightGround.Count; i++) rightIndex[rightGround[i].Id] = i;
 
 		var newX = new float[units.Count];
 
@@ -95,7 +105,7 @@ public sealed class BattleSimulator
 			float dir = u.Side == Side.Left ? 1f : -1f;
 			float enemyBaseX = u.Side == Side.Left ? _cfg.BattlefieldLength : 0f;
 
-			var target = FindNearestEnemyInFront(u, units, dir, out float targetDist);
+			var target = SelectTarget(u, units, out float targetDist);
 			float selfRadius = UnitSpacingRadius(u, formationMulByUnitId);
 			float targetRadius = target != null ? UnitSpacingRadius(target, formationMulByUnitId) : 0f;
 			bool hasEnemyInRange = target != null && targetDist <= u.Def.Range;
@@ -152,7 +162,7 @@ public sealed class BattleSimulator
 			if (!inContact)
 			{
 				float moveDist = u.Def.Speed * dt;
-				moveDist = ClampMoveByAllySpacing(u, moveDist, leftUnits, rightUnits, leftIndex, rightIndex, allySpacingMulByUnitId);
+				moveDist = ClampMoveByAllySpacing(u, moveDist, leftGround, rightGround, leftIndex, rightIndex, allySpacingMulByUnitId);
 				desiredX = u.X + dir * moveDist;
 			}
 
@@ -176,19 +186,29 @@ public sealed class BattleSimulator
 
 		leftUnits.Clear();
 		rightUnits.Clear();
+		leftGround.Clear();
+		rightGround.Clear();
 		for (int i = 0; i < units.Count; i++)
 		{
 			var u = units[i];
 			if (!u.Alive) continue;
 			if (u.Side == Side.Left) leftUnits.Add(u);
 			else rightUnits.Add(u);
+
+			if (u.Def.MovementClass == MovementClass.Ground)
+			{
+				if (u.Side == Side.Left) leftGround.Add(u);
+				else rightGround.Add(u);
+			}
 		}
 		leftUnits.Sort(CompareByXThenId);
 		rightUnits.Sort(CompareByXThenId);
+		leftGround.Sort(CompareByXThenId);
+		rightGround.Sort(CompareByXThenId);
 		formationMulByUnitId = BuildFormationMultipliers(leftUnits, rightUnits);
 		allySpacingMulByUnitId = BuildAllySpacingMultipliers(leftUnits, rightUnits, formationMulByUnitId);
-		EnforceSpacing(leftUnits, isLeftSide: true, allySpacingMulByUnitId);
-		EnforceSpacing(rightUnits, isLeftSide: false, allySpacingMulByUnitId);
+		EnforceSpacing(leftGround, isLeftSide: true, allySpacingMulByUnitId);
+		EnforceSpacing(rightGround, isLeftSide: false, allySpacingMulByUnitId);
 
 		// Cleanup dead units occasionally (cheap)
 		// (Could do each step for now)
@@ -246,21 +266,63 @@ public sealed class BattleSimulator
 		}
 	}
 
-	private static UnitState? FindNearestEnemyInFront(UnitState u, List<UnitState> units, float dir, out float dist)
+	private static UnitState? SelectTarget(UnitState attacker, List<UnitState> units, out float dist)
 	{
 		dist = float.MaxValue;
 		UnitState? target = null;
+
+		switch (attacker.Def.TargetingPolicy)
+		{
+			case TargetingPolicy.Frontmost:
+				return SelectFrontmost(attacker, units, out dist);
+			case TargetingPolicy.ClosestInRange:
+				return SelectClosest(attacker, units, inRangeOnly: true, out dist);
+			default:
+				return SelectClosest(attacker, units, inRangeOnly: false, out dist);
+		}
+	}
+
+	private static UnitState? SelectFrontmost(UnitState attacker, List<UnitState> units, out float dist)
+	{
+		dist = float.MaxValue;
+		UnitState? target = null;
+		bool left = attacker.Side == Side.Left;
 
 		for (int i = 0; i < units.Count; i++)
 		{
 			var e = units[i];
 			if (!e.Alive) continue;
-			if (e.Side == u.Side) continue;
+			if (e.Side == attacker.Side) continue;
 
-			float d = (e.X - u.X) * dir;
-			if (d <= 0f) continue;
+			float cmp = left ? e.X : -e.X;
+			float best = target == null ? float.MaxValue : (left ? target.X : -target.X);
 
-			if (d < dist)
+			if (target == null || cmp < best || (Math.Abs(cmp - best) < 0.0001f && e.Id < target.Id))
+			{
+				target = e;
+				dist = Math.Abs(e.X - attacker.X);
+			}
+		}
+
+		return target;
+	}
+
+	private static UnitState? SelectClosest(UnitState attacker, List<UnitState> units, bool inRangeOnly, out float dist)
+	{
+		dist = float.MaxValue;
+		UnitState? target = null;
+		float range = attacker.Def.Range;
+
+		for (int i = 0; i < units.Count; i++)
+		{
+			var e = units[i];
+			if (!e.Alive) continue;
+			if (e.Side == attacker.Side) continue;
+
+			float d = Math.Abs(e.X - attacker.X);
+			if (inRangeOnly && d > range) continue;
+
+			if (d < dist || (Math.Abs(d - dist) < 0.0001f && (target == null || e.Id < target.Id)))
 			{
 				dist = d;
 				target = e;
@@ -307,6 +369,7 @@ public sealed class BattleSimulator
 		Dictionary<int, float> spacingMulByUnitId)
 	{
 		if (moveDist <= 0f) return 0f;
+		if (u.Def.MovementClass == MovementClass.Air) return moveDist;
 
 		if (u.Side == Side.Left)
 		{

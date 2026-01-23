@@ -4,6 +4,8 @@ using System.Collections.Generic;
 namespace PixelArmies.SimCore;
 
 public enum Side { Left, Right }
+public enum MovementClass { Ground, Air }
+public enum TargetingPolicy { Frontmost, ClosestInRange, Closest }
 
 public readonly record struct UnitDef(
 	string Id,
@@ -14,7 +16,8 @@ public readonly record struct UnitDef(
 	float AttackRate,
 	float Range,
 	float Speed,
-	bool IsAir,
+	MovementClass MovementClass = MovementClass.Ground,
+	TargetingPolicy TargetingPolicy = TargetingPolicy.Closest,
 	float FormationSpacingMul = 1f,
 	int VanguardDepth = 0,
 	float VanguardSpacingMul = 0f

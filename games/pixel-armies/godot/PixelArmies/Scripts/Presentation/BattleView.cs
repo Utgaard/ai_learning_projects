@@ -103,7 +103,7 @@ public partial class BattleView : Node2D
 			w += (u.Def.Tier - 1) * 4;
 			h += (u.Def.Tier - 1) * 4;
 
-			if (u.Def.IsAir)
+			if (u.Def.MovementClass == MovementClass.Air)
 				y -= 40f; // air height
 
 			// Left units slightly different than right
@@ -169,7 +169,7 @@ public partial class BattleView : Node2D
 			float y = GroundY - 12;
 			float h = 12 + (u.Def.Tier - 1) * 4;
 			float w = 10 + (u.Def.Tier - 1) * 4;
-			if (u.Def.IsAir) y -= 40f;
+			if (u.Def.MovementClass == MovementClass.Air) y -= 40f;
 			var center = GetUnitCenter(u, w, h, y);
 			_unitPositions[u.Id] = center;
 			_lastKnownPositions[u.Id] = center;
