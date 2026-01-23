@@ -19,11 +19,17 @@ public partial class BattleView : Node2D
 	private const float AirAltitudeStep = 2f;
 	private const float AirBobAmplitude = 6f;
 	private const float AirBobSpeed = 3.2f;
+	private const float GroundBobAmplitudeMoving = 2.2f;
+	private const float GroundBobAmplitudeIdle = 0.2f;
+	private const float GroundBobFrequency = 2.6f;
+	private const float MoveEpsilon = 0.5f;
 
 	private BattleSimulator? _sim;
 	private SimConfig? _cfg;
+	private float _lastDt;
 
 	private readonly Dictionary<int, Vector2> _unitPositions = new();
+	private readonly Dictionary<int, Vector2> _prevUnitCenters = new();
 	private readonly Dictionary<int, Vector2> _lastKnownPositions = new();
 	private readonly Dictionary<int, UnitVisual> _lastKnownVisuals = new();
 	private readonly Dictionary<int, float> _hitFlashTimers = new();
@@ -46,6 +52,7 @@ public partial class BattleView : Node2D
 	public void Advance(float dt, IReadOnlyList<DamageEvent> damageEvents, IReadOnlyList<UnitDiedEvent> deathEvents)
 	{
 		if (_sim == null) return;
+		_lastDt = dt;
 
 		UpdateUnitPositions();
 
@@ -99,7 +106,7 @@ public partial class BattleView : Node2D
 
 		foreach (var u in _sim.State.Units)
 		{
-			float y = GroundY - 12;
+			float y = GroundY;
 			float h = 12;
 			float w = 10;
 
@@ -108,12 +115,14 @@ public partial class BattleView : Node2D
 			h += (u.Def.Tier - 1) * 4;
 
 			if (u.Def.MovementClass == MovementClass.Air)
-				y += AirAltitudeBase + GetAirJitter(u.Id) + GetAirBob(u.Id, _sim.State.Time);
+				y += AirAltitudeBase + GetAirJitter(u.Id);
 
 			// Left units slightly different than right
 			var c = u.Side == SimSide.Left ? Colors.Cyan : Colors.Orange;
 
-			var center = GetUnitCenter(u, w, h, y);
+			var center = _unitPositions.TryGetValue(u.Id, out var cached)
+				? cached
+				: GetUnitCenter(u, w, h, y);
 			if (_hitReactions.TryGetRenderCenter(u.Id, out var renderCenter))
 			{
 				center = renderCenter;
@@ -170,12 +179,25 @@ public partial class BattleView : Node2D
 		foreach (var u in _sim.State.Units)
 		{
 			if (!u.Alive) continue;
-			float y = GroundY - 12;
+			float y = GroundY;
 			float h = 12 + (u.Def.Tier - 1) * 4;
 			float w = 10 + (u.Def.Tier - 1) * 4;
-			if (u.Def.MovementClass == MovementClass.Air) y += AirAltitudeBase + GetAirJitter(u.Id) + GetAirBob(u.Id, _sim.State.Time);
-			var center = GetUnitCenter(u, w, h, y);
+			if (u.Def.MovementClass == MovementClass.Air) y += AirAltitudeBase + GetAirJitter(u.Id);
+			var baseCenter = GetUnitCenter(u, w, h, y);
+			var center = baseCenter;
+
+			if (u.Def.MovementClass == MovementClass.Air)
+			{
+				center.Y += GetAirBob(u.Id, _sim.State.Time);
+			}
+			else
+			{
+				bool moving = IsMoving(u.Id, baseCenter, _lastDt);
+				center.Y += GetGroundBob(u.Id, _sim.State.Time, moving);
+			}
+
 			_unitPositions[u.Id] = center;
+			_prevUnitCenters[u.Id] = baseCenter;
 			_lastKnownPositions[u.Id] = center;
 			_lastKnownVisuals[u.Id] = new UnitVisual
 			{
@@ -201,6 +223,23 @@ public partial class BattleView : Node2D
 	{
 		float phase = (unitId % 7) * 0.7f;
 		return Mathf.Sin(timeSeconds * AirBobSpeed + phase) * AirBobAmplitude;
+	}
+
+	private bool IsMoving(int unitId, Vector2 baseCenter, float dt)
+	{
+		if (dt <= 0f) return false;
+		if (!_prevUnitCenters.TryGetValue(unitId, out var prev)) return true;
+		float speed = (baseCenter - prev).Length() / dt;
+		return speed > MoveEpsilon;
+	}
+
+	private static float GetGroundBob(int unitId, float timeSeconds, bool moving)
+	{
+		float amplitude = moving ? GroundBobAmplitudeMoving : GroundBobAmplitudeIdle;
+		float phase = (unitId % 17) * 0.37f;
+		float omega = GroundBobFrequency * Mathf.Tau;
+		float wave = Mathf.Sin(timeSeconds * omega + phase);
+		return (wave + 1f) * 0.5f * amplitude;
 	}
 
 	private void ApplyDamageEvents(IReadOnlyList<DamageEvent> damageEvents)
