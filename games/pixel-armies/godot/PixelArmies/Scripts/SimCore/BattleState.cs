@@ -9,6 +9,10 @@ public sealed class BattleState
 
     public float LeftBaseHp;
     public float RightBaseHp;
+    public int LeftKills;
+    public int RightKills;
+    public float LeftDamageDealt;
+    public float RightDamageDealt;
 
     public readonly List<UnitState> Units = new();
     public int NextUnitId = 1;

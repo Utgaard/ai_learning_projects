@@ -27,6 +27,8 @@ public sealed class BattleSimulator
 	private List<UnitDiedEvent> _unitDiedEventsBuffer = new();
 
 	public BattleState State { get; }
+	public Spawner LeftSpawner => _leftSpawner;
+	public Spawner RightSpawner => _rightSpawner;
 
 	public BattleSimulator(SimConfig cfg, ArmyDef leftArmy, ArmyDef rightArmy, int seed, DebugSettings debugSettings = default)
 	{
@@ -142,10 +144,13 @@ public sealed class BattleSimulator
 				{
 					float dmg = u.Def.Damage;
 					bool wasAlive = target!.Hp > 0f;
+					float applied = wasAlive ? MathF.Min(dmg, target.Hp) : 0f;
 					target!.Hp -= dmg;
+					RecordDamage(u.Side, applied);
 					_damageEvents.Add(new DamageEvent(u.Id, target.Id, dmg, IsRanged(u.Def)));
 					if (wasAlive && target.Hp <= 0f)
 					{
+						RecordKill(u.Side);
 						_unitDiedEvents.Add(new UnitDiedEvent(target.Id, u.Id));
 					}
 					u.AttackCooldown = AttackCooldownFor(u.Def);
@@ -161,8 +166,18 @@ public sealed class BattleSimulator
 					if (u.AttackCooldown <= 0f)
 					{
 						float dmg = u.Def.Damage;
-						if (u.Side == Side.Left) State.RightBaseHp -= dmg;
-						else State.LeftBaseHp -= dmg;
+						if (u.Side == Side.Left)
+						{
+							float before = State.RightBaseHp;
+							State.RightBaseHp -= dmg;
+							RecordDamage(u.Side, MathF.Min(dmg, before));
+						}
+						else
+						{
+							float before = State.LeftBaseHp;
+							State.LeftBaseHp -= dmg;
+							RecordDamage(u.Side, MathF.Min(dmg, before));
+						}
 						u.AttackCooldown = AttackCooldownFor(u.Def);
 					}
 					continue;
@@ -291,8 +306,6 @@ public sealed class BattleSimulator
 	private static UnitState? SelectTarget(UnitState attacker, List<UnitState> units, out float dist)
 	{
 		dist = float.MaxValue;
-		UnitState? target = null;
-
 		switch (attacker.Def.TargetingPolicy)
 		{
 			case TargetingPolicy.Frontmost:
@@ -560,6 +573,19 @@ public sealed class BattleSimulator
 				airUnits[j] = b;
 			}
 		}
+	}
+
+	private void RecordDamage(Side side, float amount)
+	{
+		if (amount <= 0f) return;
+		if (side == Side.Left) State.LeftDamageDealt += amount;
+		else State.RightDamageDealt += amount;
+	}
+
+	private void RecordKill(Side side)
+	{
+		if (side == Side.Left) State.LeftKills++;
+		else State.RightKills++;
 	}
 
 	private void PrintDebugLines()

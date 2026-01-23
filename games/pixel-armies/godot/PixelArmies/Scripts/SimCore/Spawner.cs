@@ -15,6 +15,11 @@ public sealed class Spawner
 	private UnitDef? _currentBucketUnit;
 	private float _currentBucketProgress;
 
+	public float PowerPool => _powerPool;
+	public int CurrentBucketTier => _currentBucketTier;
+	public float CurrentBucketProgress => _currentBucketProgress;
+	public float CurrentTargetCost => _currentBucketUnit.HasValue ? _currentBucketUnit.Value.Cost : 0f;
+
 	public Spawner(Side side, ArmyDef army, SimConfig cfg, Rng rng)
 	{
 		_side = side;

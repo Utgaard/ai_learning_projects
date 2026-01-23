@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using Godot;
 using PixelArmies.Content;
@@ -28,8 +29,11 @@ public partial class BattleGameHost : Node2D
 	private Camera2D? _cam;
 	private Battlefield? _battlefield;
 	private BattleView? _view;
+	private HudRoot? _hud;
+	private readonly HudSnapshot _hudSnapshot = new();
 	private readonly List<DamageEvent> _frameDamageEvents = new();
 	private readonly List<UnitDiedEvent> _frameDeathEvents = new();
+	private static readonly HudUnitSpawnedEvent[] EmptySpawnEvents = Array.Empty<HudUnitSpawnedEvent>();
 
 	public override void _Ready()
 	{
@@ -53,6 +57,10 @@ public partial class BattleGameHost : Node2D
 		_view = new BattleView();
 		_view.Configure(_sim, _cfg, GroundY);
 		AddChild(_view);
+
+		// HUD (screen space)
+		_hud = new HudRoot();
+		AddChild(_hud);
 
 		// Camera
 		_cam = new Camera2D
@@ -100,6 +108,7 @@ public partial class BattleGameHost : Node2D
 		}
 
 		_view.Advance((float)delta, _frameDamageEvents, _frameDeathEvents);
+		UpdateHud();
 		UpdateCamera((float)delta);
 		_view.QueueRedraw();
 	}
@@ -145,5 +154,33 @@ public partial class BattleGameHost : Node2D
 
 		_cam.Position = _cam.Position.Lerp(targetPos, posAlpha);
 		_cam.Zoom = _cam.Zoom.Lerp(targetZoom, zoomAlpha);
+	}
+
+	private void UpdateHud()
+	{
+		if (_sim == null || _cfg == null || _hud == null) return;
+
+		_hudSnapshot.Left.BaseHp = _sim.State.LeftBaseHp;
+		_hudSnapshot.Right.BaseHp = _sim.State.RightBaseHp;
+		_hudSnapshot.Left.UnlockedTier = _cfg.UnlockedTierForTime(_sim.State.Time);
+		_hudSnapshot.Right.UnlockedTier = _hudSnapshot.Left.UnlockedTier;
+		_hudSnapshot.Left.Kills = _sim.State.LeftKills;
+		_hudSnapshot.Right.Kills = _sim.State.RightKills;
+		_hudSnapshot.Left.DamageDealt = _sim.State.LeftDamageDealt;
+		_hudSnapshot.Right.DamageDealt = _sim.State.RightDamageDealt;
+
+		var leftSpawner = _sim.LeftSpawner;
+		_hudSnapshot.Left.PowerPool = leftSpawner.PowerPool;
+		_hudSnapshot.Left.CurrentBucketTier = leftSpawner.CurrentBucketTier;
+		_hudSnapshot.Left.CurrentBucketProgress = leftSpawner.CurrentBucketProgress;
+		_hudSnapshot.Left.CurrentTargetCost = leftSpawner.CurrentTargetCost;
+
+		var rightSpawner = _sim.RightSpawner;
+		_hudSnapshot.Right.PowerPool = rightSpawner.PowerPool;
+		_hudSnapshot.Right.CurrentBucketTier = rightSpawner.CurrentBucketTier;
+		_hudSnapshot.Right.CurrentBucketProgress = rightSpawner.CurrentBucketProgress;
+		_hudSnapshot.Right.CurrentTargetCost = rightSpawner.CurrentTargetCost;
+
+		_hud.UpdateHud(_hudSnapshot, EmptySpawnEvents, _frameDeathEvents, _frameDamageEvents);
 	}
 }
