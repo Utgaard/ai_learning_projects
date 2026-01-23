@@ -101,6 +101,18 @@ public sealed class BattleSimulator
 			bool hasEnemyInRange = target != null && targetDist <= u.Def.Range;
 			bool inContact = target != null && targetDist <= selfRadius + targetRadius;
 
+			if (!hasEnemyInRange)
+			{
+				var contactTarget = FindContactEnemy(u, units, selfRadius, formationMulByUnitId);
+				if (contactTarget != null)
+				{
+					target = contactTarget;
+					targetRadius = UnitSpacingRadius(contactTarget, formationMulByUnitId);
+					inContact = true;
+					hasEnemyInRange = true;
+				}
+			}
+
 			u.AttackCooldown = Math.Max(0f, u.AttackCooldown - dt);
 
 			if (hasEnemyInRange)
@@ -251,6 +263,33 @@ public sealed class BattleSimulator
 			if (d < dist)
 			{
 				dist = d;
+				target = e;
+			}
+		}
+
+		return target;
+	}
+
+	private UnitState? FindContactEnemy(
+		UnitState u,
+		List<UnitState> units,
+		float selfRadius,
+		Dictionary<int, float> spacingMulByUnitId)
+	{
+		UnitState? target = null;
+		float bestDist = float.MaxValue;
+
+		for (int i = 0; i < units.Count; i++)
+		{
+			var e = units[i];
+			if (!e.Alive) continue;
+			if (e.Side == u.Side) continue;
+
+			float dist = Math.Abs(e.X - u.X);
+			float contactDist = selfRadius + UnitSpacingRadius(e, spacingMulByUnitId);
+			if (dist <= contactDist && dist < bestDist)
+			{
+				bestDist = dist;
 				target = e;
 			}
 		}
