@@ -33,7 +33,10 @@ public partial class BattleGameHost : Node2D
 	private readonly HudSnapshot _hudSnapshot = new();
 	private readonly List<DamageEvent> _frameDamageEvents = new();
 	private readonly List<UnitDiedEvent> _frameDeathEvents = new();
-	private static readonly HudUnitSpawnedEvent[] EmptySpawnEvents = Array.Empty<HudUnitSpawnedEvent>();
+	private readonly List<PowerAllocatedEvent> _framePowerEvents = new();
+	private readonly List<UnitSpawnedEvent> _frameSpawnEvents = new();
+	private static readonly IReadOnlyList<PowerAllocatedEvent> EmptyPowerEvents = Array.Empty<PowerAllocatedEvent>();
+	private static readonly IReadOnlyList<UnitSpawnedEvent> EmptySpawnEvents = Array.Empty<UnitSpawnedEvent>();
 
 	public override void _Ready()
 	{
@@ -85,6 +88,8 @@ public partial class BattleGameHost : Node2D
 
 		_frameDamageEvents.Clear();
 		_frameDeathEvents.Clear();
+		_framePowerEvents.Clear();
+		_frameSpawnEvents.Clear();
 
 		if (!_sim.State.IsOver)
 		{
@@ -96,6 +101,10 @@ public partial class BattleGameHost : Node2D
 				if (events.Count > 0) _frameDamageEvents.AddRange(events);
 				var deaths = _sim.ConsumeUnitDiedEvents();
 				if (deaths.Count > 0) _frameDeathEvents.AddRange(deaths);
+				var power = _sim.ConsumePowerAllocatedEvents();
+				if (power.Count > 0) _framePowerEvents.AddRange(power);
+				var spawns = _sim.ConsumeUnitSpawnedEvents();
+				if (spawns.Count > 0) _frameSpawnEvents.AddRange(spawns);
 				_accum -= SimConfig.FixedDt;
 			}
 		}
@@ -105,6 +114,10 @@ public partial class BattleGameHost : Node2D
 			if (events.Count > 0) _frameDamageEvents.AddRange(events);
 			var deaths = _sim.ConsumeUnitDiedEvents();
 			if (deaths.Count > 0) _frameDeathEvents.AddRange(deaths);
+			var power = _sim.ConsumePowerAllocatedEvents();
+			if (power.Count > 0) _framePowerEvents.AddRange(power);
+			var spawns = _sim.ConsumeUnitSpawnedEvents();
+			if (spawns.Count > 0) _frameSpawnEvents.AddRange(spawns);
 		}
 
 		_view.Advance((float)delta, _frameDamageEvents, _frameDeathEvents);
@@ -181,6 +194,12 @@ public partial class BattleGameHost : Node2D
 		_hudSnapshot.Right.CurrentBucketProgress = rightSpawner.CurrentBucketProgress;
 		_hudSnapshot.Right.CurrentTargetCost = rightSpawner.CurrentTargetCost;
 
-		_hud.UpdateHud(_hudSnapshot, EmptySpawnEvents, _frameDeathEvents, _frameDamageEvents);
+		var powerEvents = _framePowerEvents.Count > 0
+			? (IReadOnlyList<PowerAllocatedEvent>)_framePowerEvents
+			: EmptyPowerEvents;
+		var spawnEvents = _frameSpawnEvents.Count > 0
+			? (IReadOnlyList<UnitSpawnedEvent>)_frameSpawnEvents
+			: EmptySpawnEvents;
+		_hud.UpdateHud(_hudSnapshot, powerEvents, spawnEvents, _frameDeathEvents, _frameDamageEvents);
 	}
 }

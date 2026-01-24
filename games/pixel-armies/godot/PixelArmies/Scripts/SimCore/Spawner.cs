@@ -5,6 +5,9 @@ namespace PixelArmies.SimCore;
 
 public sealed class Spawner
 {
+	private const float OrbChunkValue = 1.0f;
+	private const int MaxOrbsPerStep = 6;
+
 	private readonly Side _side;
 	private readonly ArmyDef _army;
 	private readonly SimConfig _cfg;
@@ -14,6 +17,12 @@ public sealed class Spawner
 	private int _currentBucketTier;
 	private UnitDef? _currentBucketUnit;
 	private float _currentBucketProgress;
+	private float _orbRemainder;
+
+	private List<PowerAllocatedEvent> _powerAllocatedEvents = new();
+	private List<PowerAllocatedEvent> _powerAllocatedEventsBuffer = new();
+	private List<UnitSpawnedEvent> _unitSpawnedEvents = new();
+	private List<UnitSpawnedEvent> _unitSpawnedEventsBuffer = new();
 
 	public float PowerPool => _powerPool;
 	public int CurrentBucketTier => _currentBucketTier;
@@ -45,6 +54,7 @@ public sealed class Spawner
 		if (alloc <= 0f) return;
 		_powerPool -= alloc;
 		_currentBucketProgress += alloc;
+		EmitPowerAllocatedEvents(alloc);
 
 		int spawns = 0;
 		while (_currentBucketUnit != null &&
@@ -55,11 +65,43 @@ public sealed class Spawner
 			_currentBucketProgress -= unit.Cost;
 
 			float spawnX = _side == Side.Left ? 0f : _cfg.BattlefieldLength;
-			s.Units.Add(new UnitState(s.NextUnitId++, _side, unit, spawnX));
+			var spawned = new UnitState(s.NextUnitId++, _side, unit, spawnX);
+			s.Units.Add(spawned);
+			_unitSpawnedEvents.Add(new UnitSpawnedEvent(_side, unit.Tier, spawned.Id, unit.Id));
 			spawns++;
 
 			SelectNewBucketTarget(unlockedTier);
 		}
+	}
+
+	private void EmitPowerAllocatedEvents(float allocatedPower)
+	{
+		_orbRemainder += allocatedPower;
+		int emitted = 0;
+		while (_orbRemainder >= OrbChunkValue && emitted < MaxOrbsPerStep)
+		{
+			_powerAllocatedEvents.Add(new PowerAllocatedEvent(_side, _currentBucketTier, OrbChunkValue));
+			_orbRemainder -= OrbChunkValue;
+			emitted++;
+		}
+	}
+
+	public IReadOnlyList<PowerAllocatedEvent> ConsumePowerAllocatedEvents()
+	{
+		var events = _powerAllocatedEvents;
+		_powerAllocatedEvents = _powerAllocatedEventsBuffer;
+		_powerAllocatedEventsBuffer = events;
+		_powerAllocatedEvents.Clear();
+		return events;
+	}
+
+	public IReadOnlyList<UnitSpawnedEvent> ConsumeUnitSpawnedEvents()
+	{
+		var events = _unitSpawnedEvents;
+		_unitSpawnedEvents = _unitSpawnedEventsBuffer;
+		_unitSpawnedEventsBuffer = events;
+		_unitSpawnedEvents.Clear();
+		return events;
 	}
 
 	private static float TierWeight(int tier)

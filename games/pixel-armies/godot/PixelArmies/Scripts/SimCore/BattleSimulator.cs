@@ -25,6 +25,8 @@ public sealed class BattleSimulator
 	private List<DamageEvent> _damageEventsBuffer = new();
 	private List<UnitDiedEvent> _unitDiedEvents = new();
 	private List<UnitDiedEvent> _unitDiedEventsBuffer = new();
+	private readonly List<PowerAllocatedEvent> _powerAllocatedEvents = new();
+	private readonly List<UnitSpawnedEvent> _unitSpawnedEvents = new();
 
 	public BattleState State { get; }
 	public Spawner LeftSpawner => _leftSpawner;
@@ -546,6 +548,26 @@ public sealed class BattleSimulator
 		_unitDiedEventsBuffer = events;
 		_unitDiedEvents.Clear();
 		return events;
+	}
+
+	public IReadOnlyList<PowerAllocatedEvent> ConsumePowerAllocatedEvents()
+	{
+		_powerAllocatedEvents.Clear();
+		var left = _leftSpawner.ConsumePowerAllocatedEvents();
+		if (left.Count > 0) _powerAllocatedEvents.AddRange(left);
+		var right = _rightSpawner.ConsumePowerAllocatedEvents();
+		if (right.Count > 0) _powerAllocatedEvents.AddRange(right);
+		return _powerAllocatedEvents;
+	}
+
+	public IReadOnlyList<UnitSpawnedEvent> ConsumeUnitSpawnedEvents()
+	{
+		_unitSpawnedEvents.Clear();
+		var left = _leftSpawner.ConsumeUnitSpawnedEvents();
+		if (left.Count > 0) _unitSpawnedEvents.AddRange(left);
+		var right = _rightSpawner.ConsumeUnitSpawnedEvents();
+		if (right.Count > 0) _unitSpawnedEvents.AddRange(right);
+		return _unitSpawnedEvents;
 	}
 
 	private void EnforceAirSpacing(List<UnitState> airUnits, Dictionary<int, float> spacingMulByUnitId)

@@ -75,7 +75,8 @@ public partial class HudRoot : CanvasLayer
 
 	public void UpdateHud(
 		HudSnapshot snapshot,
-		IReadOnlyList<HudUnitSpawnedEvent> spawnEvents,
+		IReadOnlyList<PowerAllocatedEvent> powerEvents,
+		IReadOnlyList<UnitSpawnedEvent> spawnEvents,
 		IReadOnlyList<UnitDiedEvent> deathEvents,
 		IReadOnlyList<DamageEvent> damageEvents)
 	{
@@ -83,6 +84,8 @@ public partial class HudRoot : CanvasLayer
 		_rightPanel?.ApplySnapshot(snapshot.Right);
 		_statusPanel?.ApplySnapshot(snapshot.Left, snapshot.Right);
 
+		_leftPanel?.OnPowerAllocatedEvents(powerEvents);
+		_rightPanel?.OnPowerAllocatedEvents(powerEvents);
 		_leftPanel?.OnUnitSpawnedEvents(spawnEvents);
 		_rightPanel?.OnUnitSpawnedEvents(spawnEvents);
 		_statusPanel?.OnUnitDiedEvents(deathEvents);

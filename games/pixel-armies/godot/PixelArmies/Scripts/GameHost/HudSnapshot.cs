@@ -1,7 +1,5 @@
 #nullable enable
 
-using PixelArmies.SimCore;
-
 namespace PixelArmies.GameHost;
 
 public sealed class HudSnapshot
@@ -21,10 +19,3 @@ public sealed class HudSideSnapshot
 	public float CurrentBucketProgress;
 	public float CurrentTargetCost;
 }
-
-public readonly record struct HudUnitSpawnedEvent(
-	Side Side,
-	int UnitId,
-	int Tier,
-	float Cost
-);
