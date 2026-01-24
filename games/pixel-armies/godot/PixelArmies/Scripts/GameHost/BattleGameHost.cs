@@ -27,7 +27,7 @@ public partial class BattleGameHost : Node2D
 	private float _accum;
 
 	private Camera2D? _cam;
-	private Battlefield? _battlefield;
+	private BattlefieldBackdrop? _backdrop;
 	private BattleView? _view;
 	private HudRoot? _hud;
 	private readonly HudSnapshot _hudSnapshot = new();
@@ -47,23 +47,25 @@ public partial class BattleGameHost : Node2D
 		_sim = new BattleSimulator(_cfg, left, right, seed: 12345, _debugSettings);
 
 		// Battlefield background
-		_battlefield = new Battlefield
+		_backdrop = new BattlefieldBackdrop
 		{
-			BattlefieldLength = _cfg.BattlefieldLength,
 			GroundY = GroundY,
-			ZIndex = -10,
+			ZIndex = -20,
 			ZAsRelative = true,
 		};
-		AddChild(_battlefield);
+		AddChild(_backdrop);
 
 		// Units and base rendering
 		_view = new BattleView();
 		_view.Configure(_sim, _cfg, GroundY);
 		AddChild(_view);
 
-		// HUD (screen space)
-		_hud = new HudRoot();
-		AddChild(_hud);
+		// HUD (screen space) only when running in the main viewport
+		if (_hud == null && GetViewport() is not SubViewport)
+		{
+			_hud = new HudRoot();
+			AddChild(_hud);
+		}
 
 		// Camera
 		_cam = new Camera2D
@@ -73,8 +75,14 @@ public partial class BattleGameHost : Node2D
 			Zoom = new Vector2(MaxZoom, MaxZoom),
 		};
 		AddChild(_cam);
+		_backdrop.AttachCamera(_cam);
 
 		GD.Print("Started demo battle sim (visual debug).");
+	}
+
+	public void AttachHud(HudRoot hud)
+	{
+		_hud = hud;
 	}
 
 	public void ConfigureDebug(DebugSettings settings)

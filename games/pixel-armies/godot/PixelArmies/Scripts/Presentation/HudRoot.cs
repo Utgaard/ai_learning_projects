@@ -33,6 +33,40 @@ public partial class HudRoot : CanvasLayer
 			OffsetBottom = 0f,
 		};
 
+		var plate = new ColorRect
+		{
+			Name = "HudPlate",
+			AnchorLeft = 0f,
+			AnchorTop = 0f,
+			AnchorRight = 1f,
+			AnchorBottom = 1f,
+			OffsetLeft = 0f,
+			OffsetTop = 0f,
+			OffsetRight = 0f,
+			OffsetBottom = 0f,
+			Color = new Color(0.06f, 0.07f, 0.10f, 0.88f),
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			ZIndex = 0,
+			ZAsRelative = true,
+		};
+
+		var border = new ColorRect
+		{
+			Name = "HudBorder",
+			AnchorLeft = 0f,
+			AnchorTop = 1f,
+			AnchorRight = 1f,
+			AnchorBottom = 1f,
+			OffsetLeft = 0f,
+			OffsetTop = -2f,
+			OffsetRight = 0f,
+			OffsetBottom = 0f,
+			Color = new Color(1f, 1f, 1f, 0.08f),
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			ZIndex = 1,
+			ZAsRelative = true,
+		};
+
 		var margin = new MarginContainer
 		{
 			AnchorLeft = 0f,
@@ -43,6 +77,8 @@ public partial class HudRoot : CanvasLayer
 			OffsetTop = PanelPadding,
 			OffsetRight = -PanelPadding,
 			OffsetBottom = -PanelPadding,
+			ZIndex = 2,
+			ZAsRelative = true,
 		};
 
 		var row = new HBoxContainer
@@ -68,6 +104,8 @@ public partial class HudRoot : CanvasLayer
 		row.AddChild(_statusPanel);
 		row.AddChild(_rightPanel);
 
+		topBar.AddChild(plate);
+		topBar.AddChild(border);
 		margin.AddChild(row);
 		topBar.AddChild(margin);
 		AddChild(topBar);

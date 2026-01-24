@@ -1,6 +1,25 @@
-[gd_scene load_steps=2 format=3 uid="uid://bjay6kchtjsuo"]
+[gd_scene load_steps=3 format=3 uid="uid://bjay6kchtjsuo"]
 
 [ext_resource type="Script" uid="uid://c3a72uf5d4b3w" path="res://Scripts/Main.cs" id="1_glv2v"]
+[ext_resource type="Script" path="res://Scripts/Presentation/HudRoot.cs" id="2_51x8s"]
 
-[node name="Node" type="Node2D"]
+[node name="Main" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
 script = ExtResource("1_glv2v")
+
+[node name="WorldViewportContainer" type="SubViewportContainer" parent="."]
+anchor_top = 0.33333334
+anchor_right = 1.0
+anchor_bottom = 1.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+stretch = true
+
+[node name="WorldViewport" type="SubViewport" parent="WorldViewportContainer"]
+
+[node name="Hud" type="CanvasLayer" parent="."]
+layer = 10
+script = ExtResource("2_51x8s")
