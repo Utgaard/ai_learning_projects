@@ -33,6 +33,8 @@ public partial class BattleView : Node2D
 	private readonly Dictionary<int, Vector2> _prevUnitCenters = new();
 	private readonly Dictionary<int, Vector2> _lastKnownPositions = new();
 	private readonly Dictionary<int, UnitVisual> _lastKnownVisuals = new();
+	private readonly Dictionary<int, UnitDef> _lastKnownDefs = new();
+	private readonly Dictionary<int, SimSide> _lastKnownSides = new();
 	private readonly Dictionary<int, float> _hitFlashTimers = new();
 	private readonly Dictionary<int, float> _walkPhases = new();
 	private readonly Dictionary<int, bool> _unitMoving = new();
@@ -42,7 +44,11 @@ public partial class BattleView : Node2D
 	private readonly List<Tracer> _tracers = new();
 	private readonly List<int> _scratchKeys = new();
 	private readonly HitReactionSystem _hitReactions = new();
-	private readonly DeathEffectSystem _deathEffects = new();
+	private readonly IUnitAnimationProfile[] _profiles =
+	{
+		new StickTier1Profile(),
+		new DefaultRectProfile()
+	};
 
 	public float GroundY { get; private set; } = 120f;
 
@@ -66,14 +72,14 @@ public partial class BattleView : Node2D
 		}
 
 		_hitReactions.Advance(dt, damageEvents, _unitPositions);
-		_deathEffects.Advance(dt, deathEvents, _lastKnownPositions, _lastKnownVisuals);
+		HandleDeathEvents(deathEvents);
 
 		UpdateFlashTimers(dt);
 		UpdateAttackTimers(dt);
 		UpdateDamageBuckets(dt);
 		UpdateFloatingNumbers(dt);
 		UpdateTracers(dt);
-		_deathEffects.Update(dt);
+		UpdateProfiles(dt);
 	}
 
 	public override void _Draw()
@@ -104,10 +110,10 @@ public partial class BattleView : Node2D
 
 		DrawTierOverlay(font);
 		DrawTracers();
-		_deathEffects.Draw(this);
 
-		// Units as rectangles
+		// Units
 		const int tierFontSize = 10;
+		var drawContext = new UnitDrawContext(this, font, tierFontSize);
 
 		foreach (var u in _sim.State.Units)
 		{
@@ -133,38 +139,32 @@ public partial class BattleView : Node2D
 				center = renderCenter;
 			}
 
-			if (u.Def.Tier == 1)
+			bool moving = _unitMoving.TryGetValue(u.Id, out var mv) && mv;
+			float phase = _walkPhases.TryGetValue(u.Id, out var ph) ? ph : 0f;
+			float attackPhase = GetAttackPhase(u.Id);
+			float flashAlpha = 0f;
+			if (_hitFlashTimers.TryGetValue(u.Id, out float flash))
 			{
-				bool moving = _unitMoving.TryGetValue(u.Id, out var mv) && mv;
-				float phase = _walkPhases.TryGetValue(u.Id, out var ph) ? ph : 0f;
-				float attackPhase = GetAttackPhase(u.Id);
-				var feet = new Vector2(center.X, center.Y + h * 0.5f);
-				float weaponLength = u.Def.WeaponLength > 0f ? u.Def.WeaponLength : 14f;
-				StickUnitRenderer.Draw(this, feet, u.Id, u.Def.Speed, u.Side, c, moving, phase, attackPhase, weaponLength);
+				flashAlpha = Mathf.Clamp(flash / FlashDuration, 0f, 1f);
 			}
-			else
-			{
-				var rect = new Rect2(center.X - w * 0.5f, center.Y - h * 0.5f, w, h);
-				float outline = 1f + (u.Def.Tier - 1) * 1.2f;
 
-				DrawRect(rect, c);
-				DrawRect(rect, Colors.Black, false, outline);
-
-				if (_hitFlashTimers.TryGetValue(u.Id, out float flash))
-				{
-					float t = Mathf.Clamp(flash / FlashDuration, 0f, 1f);
-					var flashColor = new Color(1f, 1f, 1f, t);
-					DrawRect(rect, flashColor);
-				}
-
-				string label = u.Def.Tier.ToString();
-				var labelSize = font.GetStringSize(label, fontSize: tierFontSize);
-				var labelPos = new Vector2(center.X - labelSize.X * 0.5f, center.Y - h * 0.5f - 4f);
-				DrawString(font, labelPos, label, fontSize: tierFontSize, modulate: c);
-			}
+			var profile = GetProfile(u.Def);
+			var data = new UnitDrawData(
+				center,
+				w,
+				h,
+				c,
+				u.Side,
+				moving,
+				phase,
+				attackPhase,
+				u.Def.WeaponLength,
+				flashAlpha);
+			profile.DrawUnit(drawContext, u, data);
 		}
 
 		DrawDamageNumbers(font);
+		DrawProfileOverlays();
 
 		// End text (minimal)
 		if (_sim.State.IsOver)
@@ -224,9 +224,56 @@ public partial class BattleView : Node2D
 				Height = h,
 				Color = u.Side == SimSide.Left ? Colors.Cyan : Colors.Orange
 			};
+			_lastKnownDefs[u.Id] = u.Def;
+			_lastKnownSides[u.Id] = u.Side;
 
 			UpdateWalkPhase(u, _lastDt);
 		}
+	}
+
+	private void HandleDeathEvents(IReadOnlyList<UnitDiedEvent> deathEvents)
+	{
+		if (deathEvents.Count == 0) return;
+
+		for (int i = 0; i < deathEvents.Count; i++)
+		{
+			var ev = deathEvents[i];
+			if (!_lastKnownPositions.TryGetValue(ev.UnitId, out var pos)) continue;
+			if (!_lastKnownVisuals.TryGetValue(ev.UnitId, out var visual)) continue;
+			if (!_lastKnownDefs.TryGetValue(ev.UnitId, out var def)) continue;
+			if (!_lastKnownSides.TryGetValue(ev.UnitId, out var side)) continue;
+
+			var feet = new Vector2(pos.X, pos.Y + visual.Height * 0.5f);
+			var info = new UnitDeathInfo(ev.UnitId, pos, feet, visual, side, def.WeaponLength);
+			var profile = GetProfile(def);
+			profile.OnDeath(info);
+		}
+	}
+
+	private void UpdateProfiles(float dt)
+	{
+		for (int i = 0; i < _profiles.Length; i++)
+		{
+			_profiles[i].Update(dt);
+		}
+	}
+
+	private void DrawProfileOverlays()
+	{
+		for (int i = 0; i < _profiles.Length; i++)
+		{
+			_profiles[i].DrawOverlay(this);
+		}
+	}
+
+	private IUnitAnimationProfile GetProfile(UnitDef def)
+	{
+		for (int i = 0; i < _profiles.Length; i++)
+		{
+			if (_profiles[i].Applies(def)) return _profiles[i];
+		}
+
+		return _profiles[^1];
 	}
 
 	private void UpdateWalkPhase(UnitState u, float dt)

@@ -212,6 +212,8 @@ Responsibilities:
 - Camera behavior (follow midpoint of frontline)
 - Non-interactive randomizer visualization (informational only)
 - Menus and army selection (battle setup only)
+- Animation profiles are presentation-only strategies (by unit type/tier/army) that control walk/attack/death visuals.
+- Death animations may spawn visual-only particles/fragments (no sim impact).
 
 Rules:
 - Presentation never decides battle outcomes

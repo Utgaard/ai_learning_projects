@@ -38,20 +38,24 @@ public sealed class DeathEffectSystem
 			var ev = deathEvents[i];
 			if (!lastKnownPositions.TryGetValue(ev.UnitId, out var pos)) continue;
 			if (!lastKnownVisuals.TryGetValue(ev.UnitId, out var visual)) continue;
-
-			float duration = _rng.RandfRange(MinDeathDuration, MaxDeathDuration);
-			_dyingUnits[ev.UnitId] = new DyingUnit
-			{
-				Center = pos,
-				Duration = duration,
-				Time = 0f,
-				Width = visual.Width,
-				Height = visual.Height,
-				Color = visual.Color
-			};
-
-			SpawnParticles(pos, visual);
+			AddDeath(ev.UnitId, pos, visual);
 		}
+	}
+
+	public void AddDeath(int unitId, Vector2 pos, BattleView.UnitVisual visual)
+	{
+		float duration = _rng.RandfRange(MinDeathDuration, MaxDeathDuration);
+		_dyingUnits[unitId] = new DyingUnit
+		{
+			Center = pos,
+			Duration = duration,
+			Time = 0f,
+			Width = visual.Width,
+			Height = visual.Height,
+			Color = visual.Color
+		};
+
+		SpawnParticles(pos, visual);
 	}
 
 	public void Update(float dt)
