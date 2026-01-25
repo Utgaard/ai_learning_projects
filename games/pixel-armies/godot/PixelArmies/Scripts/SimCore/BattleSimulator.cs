@@ -123,7 +123,8 @@ public sealed class BattleSimulator
 			var target = SelectTarget(u, units, out float targetDist);
 			float selfRadius = UnitSpacingRadius(u, formationMulByUnitId);
 			float targetRadius = target != null ? UnitSpacingRadius(target, formationMulByUnitId) : 0f;
-			bool hasEnemyInRange = target != null && targetDist <= u.Def.Range;
+			float attackRange = EffectiveRange(u.Def);
+			bool hasEnemyInRange = target != null && targetDist <= attackRange;
 			bool inContact = target != null && targetDist <= selfRadius + targetRadius;
 
 			if (!hasEnemyInRange)
@@ -348,7 +349,7 @@ public sealed class BattleSimulator
 	{
 		dist = float.MaxValue;
 		UnitState? target = null;
-		float range = attacker.Def.Range;
+		float range = EffectiveRange(attacker.Def);
 
 		for (int i = 0; i < units.Count; i++)
 		{
@@ -524,7 +525,12 @@ public sealed class BattleSimulator
 
 	private static float NormalizeSpacingMul(float mul) => mul > 0f ? mul : 1f;
 
-	private static bool IsRanged(UnitDef attacker) => attacker.Range >= RangedMinRange;
+	private static bool IsRanged(UnitDef attacker) => EffectiveRange(attacker) >= RangedMinRange;
+
+	private static float EffectiveRange(UnitDef def)
+	{
+		return def.WeaponLength > 0f ? def.WeaponLength : def.Range;
+	}
 	private static float AttackCooldownFor(UnitDef attacker)
 	{
 		float rate = attacker.AttackRate;

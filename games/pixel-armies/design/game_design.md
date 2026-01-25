@@ -100,6 +100,9 @@ This game explicitly avoids:
 - Emphasis on visual clarity and chaos
 - Units attack when their cooldown reaches 0 and a target is in range.
 - On attack, they apply Damage once and reset cooldown to (1 / AttackRate).
+- Unit definitions can include WeaponLength to drive melee reach; simulation uses it for attack range.
+- Tier 1 units use clubs (short WeaponLength) as the baseline weapon.
+- Future weapons (spears, axes) will extend WeaponLength and therefore reach.
 
 ### Formation & Vanguard Mechanics
 Goal: Improve readability by giving unit types distinct spacing patterns at the frontline without changing combat rules.

@@ -20,7 +20,8 @@ public readonly record struct UnitDef(
 	TargetingPolicy TargetingPolicy = TargetingPolicy.Closest,
 	float FormationSpacingMul = 1f,
 	int VanguardDepth = 0,
-	float VanguardSpacingMul = 0f
+	float VanguardSpacingMul = 0f,
+	float WeaponLength = 0f
 );
 
 public sealed class ArmyDef

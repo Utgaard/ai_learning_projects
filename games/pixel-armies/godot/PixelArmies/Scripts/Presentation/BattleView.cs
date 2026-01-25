@@ -15,6 +15,7 @@ public partial class BattleView : Node2D
 	private const float DamageNumberLifetime = 1.2f;
 	private const float DamageNumberRiseSpeed = 35f;
 	private const float TracerLifetime = 0.16f;
+	private const float AttackSwingDuration = 0.14f;
 	private const float AirAltitudeBase = -40f;
 	private const float AirAltitudeStep = 2f;
 	private const float AirBobAmplitude = 6f;
@@ -35,6 +36,7 @@ public partial class BattleView : Node2D
 	private readonly Dictionary<int, float> _hitFlashTimers = new();
 	private readonly Dictionary<int, float> _walkPhases = new();
 	private readonly Dictionary<int, bool> _unitMoving = new();
+	private readonly Dictionary<int, float> _attackTimers = new();
 	private readonly Dictionary<int, DamageBucket> _damageBuckets = new();
 	private readonly List<FloatingNumber> _floatingNumbers = new();
 	private readonly List<Tracer> _tracers = new();
@@ -67,6 +69,7 @@ public partial class BattleView : Node2D
 		_deathEffects.Advance(dt, deathEvents, _lastKnownPositions, _lastKnownVisuals);
 
 		UpdateFlashTimers(dt);
+		UpdateAttackTimers(dt);
 		UpdateDamageBuckets(dt);
 		UpdateFloatingNumbers(dt);
 		UpdateTracers(dt);
@@ -134,8 +137,10 @@ public partial class BattleView : Node2D
 			{
 				bool moving = _unitMoving.TryGetValue(u.Id, out var mv) && mv;
 				float phase = _walkPhases.TryGetValue(u.Id, out var ph) ? ph : 0f;
+				float attackPhase = GetAttackPhase(u.Id);
 				var feet = new Vector2(center.X, center.Y + h * 0.5f);
-				StickUnitRenderer.Draw(this, feet, u.Id, u.Def.Speed, u.Side, c, moving, phase);
+				float weaponLength = u.Def.WeaponLength > 0f ? u.Def.WeaponLength : 14f;
+				StickUnitRenderer.Draw(this, feet, u.Id, u.Def.Speed, u.Side, c, moving, phase, attackPhase, weaponLength);
 			}
 			else
 			{
@@ -277,6 +282,7 @@ public partial class BattleView : Node2D
 			if (ev.Damage <= 0f) continue;
 
 			_hitFlashTimers[ev.TargetId] = FlashDuration;
+			_attackTimers[ev.AttackerId] = AttackSwingDuration;
 
 			if (_damageBuckets.TryGetValue(ev.TargetId, out var bucket))
 			{
@@ -308,6 +314,26 @@ public partial class BattleView : Node2D
 			if (remaining <= 0f) _hitFlashTimers.Remove(key);
 			else _hitFlashTimers[key] = remaining;
 		}
+	}
+
+	private void UpdateAttackTimers(float dt)
+	{
+		_scratchKeys.Clear();
+		foreach (var kvp in _attackTimers) _scratchKeys.Add(kvp.Key);
+		for (int i = 0; i < _scratchKeys.Count; i++)
+		{
+			int key = _scratchKeys[i];
+			float remaining = _attackTimers[key] - dt;
+			if (remaining <= 0f) _attackTimers.Remove(key);
+			else _attackTimers[key] = remaining;
+		}
+	}
+
+	private float GetAttackPhase(int unitId)
+	{
+		if (!_attackTimers.TryGetValue(unitId, out float timer)) return 0f;
+		float phase = 1f - Mathf.Clamp(timer / AttackSwingDuration, 0f, 1f);
+		return phase;
 	}
 
 	private void UpdateDamageBuckets(float dt)
