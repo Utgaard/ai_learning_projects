@@ -33,6 +33,8 @@ public partial class BattleView : Node2D
 	private readonly Dictionary<int, Vector2> _lastKnownPositions = new();
 	private readonly Dictionary<int, UnitVisual> _lastKnownVisuals = new();
 	private readonly Dictionary<int, float> _hitFlashTimers = new();
+	private readonly Dictionary<int, float> _walkPhases = new();
+	private readonly Dictionary<int, bool> _unitMoving = new();
 	private readonly Dictionary<int, DamageBucket> _damageBuckets = new();
 	private readonly List<FloatingNumber> _floatingNumbers = new();
 	private readonly List<Tracer> _tracers = new();
@@ -128,23 +130,33 @@ public partial class BattleView : Node2D
 				center = renderCenter;
 			}
 
-			var rect = new Rect2(center.X - w * 0.5f, center.Y - h * 0.5f, w, h);
-			float outline = 1f + (u.Def.Tier - 1) * 1.2f;
-
-			DrawRect(rect, c);
-			DrawRect(rect, Colors.Black, false, outline);
-
-			if (_hitFlashTimers.TryGetValue(u.Id, out float flash))
+			if (u.Def.Tier == 1)
 			{
-				float t = Mathf.Clamp(flash / FlashDuration, 0f, 1f);
-				var flashColor = new Color(1f, 1f, 1f, t);
-				DrawRect(rect, flashColor);
+				bool moving = _unitMoving.TryGetValue(u.Id, out var mv) && mv;
+				float phase = _walkPhases.TryGetValue(u.Id, out var ph) ? ph : 0f;
+				var feet = new Vector2(center.X, center.Y + h * 0.5f);
+				StickUnitRenderer.Draw(this, feet, u.Id, u.Def.Speed, u.Side, c, moving, phase);
 			}
+			else
+			{
+				var rect = new Rect2(center.X - w * 0.5f, center.Y - h * 0.5f, w, h);
+				float outline = 1f + (u.Def.Tier - 1) * 1.2f;
 
-			string label = u.Def.Tier.ToString();
-			var labelSize = font.GetStringSize(label, fontSize: tierFontSize);
-			var labelPos = new Vector2(center.X - labelSize.X * 0.5f, center.Y - h * 0.5f - 4f);
-			DrawString(font, labelPos, label, fontSize: tierFontSize, modulate: c);
+				DrawRect(rect, c);
+				DrawRect(rect, Colors.Black, false, outline);
+
+				if (_hitFlashTimers.TryGetValue(u.Id, out float flash))
+				{
+					float t = Mathf.Clamp(flash / FlashDuration, 0f, 1f);
+					var flashColor = new Color(1f, 1f, 1f, t);
+					DrawRect(rect, flashColor);
+				}
+
+				string label = u.Def.Tier.ToString();
+				var labelSize = font.GetStringSize(label, fontSize: tierFontSize);
+				var labelPos = new Vector2(center.X - labelSize.X * 0.5f, center.Y - h * 0.5f - 4f);
+				DrawString(font, labelPos, label, fontSize: tierFontSize, modulate: c);
+			}
 		}
 
 		DrawDamageNumbers(font);
@@ -189,11 +201,13 @@ public partial class BattleView : Node2D
 			if (u.Def.MovementClass == MovementClass.Air)
 			{
 				center.Y += GetAirBob(u.Id, _sim.State.Time);
+				_unitMoving[u.Id] = true;
 			}
 			else
 			{
 				bool moving = IsMoving(u.Id, baseCenter, _lastDt);
 				center.Y += GetGroundBob(u.Id, _sim.State.Time, moving);
+				_unitMoving[u.Id] = moving;
 			}
 
 			_unitPositions[u.Id] = center;
@@ -205,7 +219,20 @@ public partial class BattleView : Node2D
 				Height = h,
 				Color = u.Side == SimSide.Left ? Colors.Cyan : Colors.Orange
 			};
+
+			UpdateWalkPhase(u, _lastDt);
 		}
+	}
+
+	private void UpdateWalkPhase(UnitState u, float dt)
+	{
+		float phase = _walkPhases.TryGetValue(u.Id, out var value) ? value : 0f;
+		if (_unitMoving.TryGetValue(u.Id, out var moving) && moving)
+		{
+			float freq = Mathf.Clamp(6f + u.Def.Speed * 0.08f, 6f, 10f);
+			phase += dt * freq;
+		}
+		_walkPhases[u.Id] = phase;
 	}
 
 	private static Vector2 GetUnitCenter(UnitState u, float w, float h, float y)
