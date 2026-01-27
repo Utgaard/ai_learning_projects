@@ -8,18 +8,6 @@ namespace PixelArmies.Presentation;
 
 public sealed class StickDeathEffectSystem
 {
-	private const float FallDuration = 0.24f;
-	private const float DeathDuration = 0.7f;
-	private const float FragmentLifetime = 0.9f;
-	private const float SparkLifetime = 0.5f;
-	private const float FragmentSpeed = 95f;
-	private const float SparkSpeed = 190f;
-
-	private const float TorsoLen = 14f;
-	private const float LegLen = 10f;
-	private const float HeadRadius = 3f;
-	private const float LineWidth = 2.4f;
-
 	private readonly List<StickDeath> _deaths = new();
 	private readonly List<Fragment> _fragments = new();
 	private readonly List<Spark> _sparks = new();
@@ -30,7 +18,7 @@ public sealed class StickDeathEffectSystem
 		_rng.Randomize();
 	}
 
-	public void AddDeath(Vector2 feetPos, SimSide side, Color color)
+	public void AddDeath(Vector2 feetPos, SimSide side, Color color, StickDeathProfile profile)
 	{
 		_deaths.Add(new StickDeath
 		{
@@ -38,10 +26,11 @@ public sealed class StickDeathEffectSystem
 			Side = side,
 			Color = color,
 			Time = 0f,
+			Profile = profile,
 		});
 
-		SpawnFragments(feetPos, color);
-		SpawnSparks(feetPos);
+		SpawnFragments(feetPos, color, profile);
+		SpawnSparks(feetPos, profile);
 	}
 
 	public void Update(float dt)
@@ -50,7 +39,7 @@ public sealed class StickDeathEffectSystem
 		{
 			var d = _deaths[i];
 			d.Time += dt;
-			if (d.Time >= DeathDuration) _deaths.RemoveAt(i);
+			if (d.Time >= d.Profile.DeathDuration) _deaths.RemoveAt(i);
 			else _deaths[i] = d;
 		}
 
@@ -87,25 +76,26 @@ public sealed class StickDeathEffectSystem
 		for (int i = 0; i < _deaths.Count; i++)
 		{
 			var d = _deaths[i];
-			float t = Mathf.Clamp(d.Time / DeathDuration, 0f, 1f);
-			float fallT = Mathf.Clamp(d.Time / FallDuration, 0f, 1f);
+			var profile = d.Profile;
+			float t = Mathf.Clamp(d.Time / profile.DeathDuration, 0f, 1f);
+			float fallT = Mathf.Clamp(d.Time / profile.FallDuration, 0f, 1f);
 			float eased = Smoothstep(fallT);
 			float dir = d.Side == SimSide.Left ? 1f : -1f;
-			float angle = Mathf.Lerp(0f, dir * 1.6f, eased);
+			float angle = Mathf.Lerp(0f, dir * profile.FallAngle, eased);
 			float alpha = 1f - t;
 
-			var hip = d.Feet + new Vector2(0f, -LegLen);
+			var hip = d.Feet + new Vector2(0f, -profile.LegLen);
 			var torsoDir = new Vector2(Mathf.Sin(angle), -Mathf.Cos(angle));
-			var torsoEnd = hip + torsoDir * TorsoLen;
-			var headCenter = torsoEnd + torsoDir * HeadRadius;
+			var torsoEnd = hip + torsoDir * profile.TorsoLen;
+			var headCenter = torsoEnd + torsoDir * profile.HeadRadius;
 			var legLeft = d.Feet + new Vector2(-3f, -2f);
 			var legRight = d.Feet + new Vector2(3f, -2f);
 
 			var color = new Color(d.Color, alpha);
-			canvas.DrawLine(hip, torsoEnd, color, LineWidth);
-			canvas.DrawCircle(headCenter, HeadRadius, color);
-			canvas.DrawLine(d.Feet, legLeft, color, LineWidth);
-			canvas.DrawLine(d.Feet, legRight, color, LineWidth);
+			canvas.DrawLine(hip, torsoEnd, color, profile.LineWidth);
+			canvas.DrawCircle(headCenter, profile.HeadRadius, color);
+			canvas.DrawLine(d.Feet, legLeft, color, profile.LineWidth);
+			canvas.DrawLine(d.Feet, legRight, color, profile.LineWidth);
 		}
 	}
 
@@ -117,7 +107,7 @@ public sealed class StickDeathEffectSystem
 			float t = Mathf.Clamp(1f - (f.Time / f.Lifetime), 0f, 1f);
 			var color = new Color(f.Color, t);
 			var end = f.Position + f.Direction * f.Length;
-			canvas.DrawLine(f.Position, end, color, LineWidth);
+			canvas.DrawLine(f.Position, end, color, f.LineWidth);
 		}
 	}
 
@@ -127,46 +117,48 @@ public sealed class StickDeathEffectSystem
 		{
 			var s = _sparks[i];
 			float t = Mathf.Clamp(1f - (s.Time / s.Lifetime), 0f, 1f);
-			var color = new Color(0.95f, 0.2f, 0.2f, t);
+			var color = new Color(s.Color, t);
 			canvas.DrawCircle(s.Position, 2f, color);
 		}
 	}
 
-	private void SpawnFragments(Vector2 origin, Color color)
+	private void SpawnFragments(Vector2 origin, Color color, StickDeathProfile profile)
 	{
-		int count = _rng.RandiRange(8, 12);
+		int count = _rng.RandiRange(profile.FragmentCountMin, profile.FragmentCountMax);
 		for (int i = 0; i < count; i++)
 		{
 			float angle = _rng.RandfRange(0f, Mathf.Tau);
 			var dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-			float speed = FragmentSpeed * _rng.RandfRange(0.7f, 1.2f);
+			float speed = profile.FragmentSpeed * _rng.RandfRange(0.7f, 1.2f);
 			_fragments.Add(new Fragment
 			{
 				Position = origin + new Vector2(_rng.RandfRange(-8f, 8f), _rng.RandfRange(-22f, 4f)),
 				Velocity = dir * speed,
 				Direction = dir,
-				Length = _rng.RandfRange(6f, 12f),
-				Lifetime = _rng.RandfRange(0.45f, FragmentLifetime),
+				Length = _rng.RandfRange(profile.FragmentLengthMin, profile.FragmentLengthMax),
+				Lifetime = _rng.RandfRange(profile.FragmentLifetimeMin, profile.FragmentLifetimeMax),
 				Time = 0f,
-				Color = color
+				Color = color,
+				LineWidth = profile.LineWidth
 			});
 		}
 	}
 
-	private void SpawnSparks(Vector2 origin)
+	private void SpawnSparks(Vector2 origin, StickDeathProfile profile)
 	{
-		int count = _rng.RandiRange(10, 16);
+		int count = _rng.RandiRange(profile.SparkCountMin, profile.SparkCountMax);
 		for (int i = 0; i < count; i++)
 		{
 			float angle = _rng.RandfRange(-Mathf.Pi * 0.7f, -Mathf.Pi * 0.3f);
 			var dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-			float speed = SparkSpeed * _rng.RandfRange(0.7f, 1.3f);
+			float speed = profile.SparkSpeed * _rng.RandfRange(0.7f, 1.3f);
 			_sparks.Add(new Spark
 			{
 				Position = origin + new Vector2(_rng.RandfRange(-6f, 6f), _rng.RandfRange(-10f, 6f)),
 				Velocity = dir * speed,
-				Lifetime = _rng.RandfRange(0.3f, SparkLifetime),
-				Time = 0f
+				Lifetime = _rng.RandfRange(profile.SparkLifetimeMin, profile.SparkLifetimeMax),
+				Time = 0f,
+				Color = profile.SparkColor
 			});
 		}
 	}
@@ -183,6 +175,7 @@ public sealed class StickDeathEffectSystem
 		public SimSide Side;
 		public Color Color;
 		public float Time;
+		public StickDeathProfile Profile;
 	}
 
 	private struct Fragment
@@ -194,6 +187,7 @@ public sealed class StickDeathEffectSystem
 		public float Lifetime;
 		public float Time;
 		public Color Color;
+		public float LineWidth;
 	}
 
 	private struct Spark
@@ -202,5 +196,6 @@ public sealed class StickDeathEffectSystem
 		public Vector2 Velocity;
 		public float Lifetime;
 		public float Time;
+		public Color Color;
 	}
 }

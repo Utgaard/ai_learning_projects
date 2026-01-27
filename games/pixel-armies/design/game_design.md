@@ -214,6 +214,8 @@ Responsibilities:
 - Menus and army selection (battle setup only)
 - Animation profiles are presentation-only strategies (by unit type/tier/army) that control walk/attack/death visuals.
 - Death animations may spawn visual-only particles/fragments (no sim impact).
+- Army Visual Profiles define per-army style (silhouette, motion, weapon look, death intensity).
+- Profiles can be overridden per unit type within an army without changing SimCore.
 
 Rules:
 - Presentation never decides battle outcomes

@@ -32,6 +32,7 @@ public readonly struct UnitDrawData
 	public float AttackPhase { get; }
 	public float WeaponLength { get; }
 	public float FlashAlpha { get; }
+	public StickVisualProfile StickStyle { get; }
 
 	public UnitDrawData(
 		Vector2 center,
@@ -43,7 +44,8 @@ public readonly struct UnitDrawData
 		float walkPhase,
 		float attackPhase,
 		float weaponLength,
-		float flashAlpha)
+		float flashAlpha,
+		StickVisualProfile stickStyle)
 	{
 		Center = center;
 		Width = width;
@@ -55,6 +57,7 @@ public readonly struct UnitDrawData
 		AttackPhase = attackPhase;
 		WeaponLength = weaponLength;
 		FlashAlpha = flashAlpha;
+		StickStyle = stickStyle;
 	}
 }
 
@@ -66,8 +69,16 @@ public readonly struct UnitDeathInfo
 	public BattleView.UnitVisual Visual { get; }
 	public SimSide Side { get; }
 	public float WeaponLength { get; }
+	public StickDeathProfile StickDeathStyle { get; }
 
-	public UnitDeathInfo(int unitId, Vector2 center, Vector2 feet, BattleView.UnitVisual visual, SimSide side, float weaponLength)
+	public UnitDeathInfo(
+		int unitId,
+		Vector2 center,
+		Vector2 feet,
+		BattleView.UnitVisual visual,
+		SimSide side,
+		float weaponLength,
+		StickDeathProfile stickDeathStyle)
 	{
 		UnitId = unitId;
 		Center = center;
@@ -75,6 +86,7 @@ public readonly struct UnitDeathInfo
 		Visual = visual;
 		Side = side;
 		WeaponLength = weaponLength;
+		StickDeathStyle = stickDeathStyle;
 	}
 }
 
@@ -149,12 +161,13 @@ public sealed class StickTier1Profile : IUnitAnimationProfile
 			data.Moving,
 			data.WalkPhase,
 			data.AttackPhase,
-			weaponLength);
+			weaponLength,
+			data.StickStyle);
 	}
 
 	public void OnDeath(UnitDeathInfo info)
 	{
-		_deathEffects.AddDeath(info.Feet, info.Side, info.Visual.Color);
+		_deathEffects.AddDeath(info.Feet, info.Side, info.Visual.Color, info.StickDeathStyle);
 	}
 
 	public void Update(float dt)

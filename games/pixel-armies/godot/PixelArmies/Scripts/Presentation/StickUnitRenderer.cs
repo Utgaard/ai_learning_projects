@@ -8,17 +8,7 @@ namespace PixelArmies.Presentation;
 
 public static class StickUnitRenderer
 {
-	private const float TorsoLen = 14f;
-	private const float LegLen = 10f;
-	private const float ArmLen = 10f;
-	private const float HeadRadius = 3f;
-	private const float LineWidth = 2f;
-
-	private const float LegSwingAmp = 0.6f;
-	private const float BobAmp = 1.2f;
-	private const float ArmSwingAmp = 0.25f;
 	private const float BaseLegSpread = 0.35f;
-	private static readonly Color ClubColor = new(0.35f, 0.22f, 0.10f);
 
 	public static void Draw(
 		CanvasItem canvas,
@@ -30,49 +20,50 @@ public static class StickUnitRenderer
 		bool moving,
 		float walkPhase,
 		float attackPhase,
-		float weaponLength)
+		float weaponLength,
+		StickVisualProfile style)
 	{
 		float phaseOffset = (unitId % 17) * 0.37f;
 		float phase = walkPhase + phaseOffset;
 
-		float bobY = moving ? Mathf.Sin(phase * 2f) * BobAmp : 0f;
-		float lean = attackPhase > 0f ? Smoothstep(attackPhase) * 1.5f : 0f;
+		float bobY = moving ? Mathf.Sin(phase * 2f) * style.BobAmp : 0f;
+		float lean = attackPhase > 0f ? Smoothstep(attackPhase) * style.AttackLean : 0f;
 		float dir = side == SimSide.Left ? 1f : -1f;
-		var hip = feetPos + new Vector2(dir * lean, -LegLen - bobY);
+		var hip = feetPos + new Vector2(dir * lean, -style.LegLen - bobY);
 
-		DrawTorso(canvas, hip, color);
-		DrawHead(canvas, hip, color);
-		DrawLegs(canvas, hip, color, phase);
-		DrawArmAndWeapon(canvas, hip, color, side, phase, attackPhase, weaponLength);
+		DrawTorso(canvas, hip, color, style);
+		DrawHead(canvas, hip, color, style);
+		DrawLegs(canvas, hip, color, phase, style);
+		DrawArmAndWeapon(canvas, hip, color, side, phase, attackPhase, weaponLength, style);
 	}
 
-	private static void DrawTorso(CanvasItem canvas, Vector2 root, Color color)
+	private static void DrawTorso(CanvasItem canvas, Vector2 root, Color color, StickVisualProfile style)
 	{
-		var top = root + new Vector2(0f, -TorsoLen);
-		canvas.DrawLine(root, top, color, LineWidth);
+		var top = root + new Vector2(0f, -style.TorsoLen);
+		canvas.DrawLine(root, top, color, style.LineWidth);
 	}
 
-	private static void DrawHead(CanvasItem canvas, Vector2 root, Color color)
+	private static void DrawHead(CanvasItem canvas, Vector2 root, Color color, StickVisualProfile style)
 	{
-		var headCenter = root + new Vector2(0f, -TorsoLen - HeadRadius);
-		canvas.DrawCircle(headCenter, HeadRadius, color);
+		var headCenter = root + new Vector2(0f, -style.TorsoLen - style.HeadRadius);
+		canvas.DrawCircle(headCenter, style.HeadRadius, color);
 	}
 
-	private static void DrawLegs(CanvasItem canvas, Vector2 root, Color color, float phase)
+	private static void DrawLegs(CanvasItem canvas, Vector2 root, Color color, float phase, StickVisualProfile style)
 	{
-		float swing = Mathf.Sin(phase) * LegSwingAmp;
+		float swing = Mathf.Sin(phase) * style.LegSwingAmp;
 		float angleA = BaseLegSpread + swing;
 		float angleB = -BaseLegSpread - swing;
 
-		DrawLeg(canvas, root, color, angleA);
-		DrawLeg(canvas, root, color, angleB);
+		DrawLeg(canvas, root, color, angleA, style);
+		DrawLeg(canvas, root, color, angleB, style);
 	}
 
-	private static void DrawLeg(CanvasItem canvas, Vector2 root, Color color, float angle)
+	private static void DrawLeg(CanvasItem canvas, Vector2 root, Color color, float angle, StickVisualProfile style)
 	{
 		var dir = new Vector2(Mathf.Sin(angle), Mathf.Cos(angle));
-		var end = root + dir * LegLen;
-		canvas.DrawLine(root, end, color, LineWidth);
+		var end = root + dir * style.LegLen;
+		canvas.DrawLine(root, end, color, style.LineWidth);
 	}
 
 	private static void DrawArmAndWeapon(
@@ -82,22 +73,20 @@ public static class StickUnitRenderer
 		SimSide side,
 		float phase,
 		float attackPhase,
-		float weaponLength)
+		float weaponLength,
+		StickVisualProfile style)
 	{
 		float dir = side == SimSide.Left ? 1f : -1f;
-		float swing = Mathf.Sin(phase + Mathf.Pi * 0.5f) * ArmSwingAmp;
+		float swing = Mathf.Sin(phase + Mathf.Pi * 0.5f) * style.ArmSwingAmp;
 
-		float restAngle = -Mathf.Pi * 0.5f;
-		float startAngle = -0.6f;
-		float endAngle = 0.95f;
-		float attackAngle = restAngle;
+		float attackAngle = style.WeaponUprightAngle;
 		if (attackPhase > 0f)
 		{
 			float eased = Smoothstep(attackPhase);
-			attackAngle = Mathf.Lerp(startAngle, endAngle, eased);
+			attackAngle = Mathf.Lerp(style.AttackStartAngle, style.AttackEndAngle, eased);
 		}
 
-		var basePos = root + new Vector2(0f, -TorsoLen * 0.7f);
+		var basePos = root + new Vector2(0f, -style.TorsoLen * 0.7f);
 		Vector2 armDir;
 		Vector2 weaponDir;
 
@@ -109,18 +98,19 @@ public static class StickUnitRenderer
 		}
 		else
 		{
-			armDir = new Vector2(dir * Mathf.Cos(0.2f + swing), Mathf.Sin(0.2f + swing)).Normalized();
-			weaponDir = new Vector2(0f, -1f);
+			float armAngle = style.ArmForwardAngle + swing;
+			armDir = new Vector2(dir * Mathf.Cos(armAngle), Mathf.Sin(armAngle)).Normalized();
+			weaponDir = new Vector2(Mathf.Cos(style.WeaponUprightAngle), Mathf.Sin(style.WeaponUprightAngle));
 		}
 
-		var hand = basePos + armDir * ArmLen;
+		var hand = basePos + armDir * style.ArmLen;
 
-		float weaponLen = weaponLength > 0f ? weaponLength : ArmLen;
+		float weaponLen = weaponLength > 0f ? weaponLength : style.ArmLen;
 		var weaponTip = hand + weaponDir * weaponLen;
 
-		canvas.DrawLine(basePos, hand, color, LineWidth);
-		canvas.DrawLine(hand, weaponTip, ClubColor, LineWidth + 0.5f);
-		canvas.DrawCircle(weaponTip, 1.6f, ClubColor);
+		canvas.DrawLine(basePos, hand, color, style.LineWidth);
+		canvas.DrawLine(hand, weaponTip, style.WeaponColor, style.WeaponThickness);
+		canvas.DrawCircle(weaponTip, style.WeaponTipRadius, style.WeaponColor);
 	}
 
 	private static float Smoothstep(float t)

@@ -9,7 +9,7 @@ internal static class DemoArmies
 {
 	public static ArmyDef LeftBasic()
 	{
-		var a = new ArmyDef("Left Basic");
+		var a = new ArmyDef("Left Basic", "legion");
 		a.Units.Add(new UnitDef("infantry", 1, 6, 20, 6, 2.0f, 14, 90, MovementClass.Ground, TargetingPolicy.Frontmost, 0.75f, 9, 0.6f, 14f));
 		a.Units.Add(new UnitDef("spearman", 2, 12, 100, 9, 2.0f, 55, 80, MovementClass.Ground, TargetingPolicy.Frontmost, 0.9f, 4, 0.8f, 0f));
 		a.Units.Add(new UnitDef("archer", 3, 22, 80, 11, 2.0f, 140, 75, MovementClass.Air, TargetingPolicy.Frontmost, 1.0f, 0, 0f, 0f));
@@ -19,11 +19,21 @@ internal static class DemoArmies
 
 	public static ArmyDef RightBasic()
 	{
-		var a = new ArmyDef("Right Basic");
+		var a = new ArmyDef("Right Basic", "brutes");
 		a.Units.Add(new UnitDef("raider", 1, 6, 15, 6.5f, 2.0f, 14, 95, MovementClass.Ground, TargetingPolicy.Frontmost, 0.9f, 0, 0f, 14f));
 		a.Units.Add(new UnitDef("brute", 2, 13, 130, 7.5f, 2.0f, 55, 70, MovementClass.Ground, TargetingPolicy.Frontmost, 1.05f, 0, 0f, 0f));
 		a.Units.Add(new UnitDef("caster", 3, 24, 70, 14, 2.0f, 150, 70, MovementClass.Ground, TargetingPolicy.ClosestInRange, 1.15f, 0, 0f, 0f));
 		a.Units.Add(new UnitDef("dragon", 4, 45, 260, 30, 1.5f, 110, 80, MovementClass.Air, TargetingPolicy.Frontmost, 1.45f, 0, 0f, 0f));
+		return a;
+	}
+
+	public static ArmyDef Skirmishers()
+	{
+		var a = new ArmyDef("Skirmishers", "skirmishers");
+		a.Units.Add(new UnitDef("runner", 1, 6, 16, 5.5f, 2.2f, 14, 105, MovementClass.Ground, TargetingPolicy.Closest, 0.7f, 0, 0f, 14f));
+		a.Units.Add(new UnitDef("piker", 2, 12, 95, 8, 2.0f, 55, 85, MovementClass.Ground, TargetingPolicy.Frontmost, 0.85f, 0, 0f, 0f));
+		a.Units.Add(new UnitDef("slinger", 3, 20, 70, 10, 2.1f, 120, 80, MovementClass.Ground, TargetingPolicy.ClosestInRange, 1.0f, 0, 0f, 0f));
+		a.Units.Add(new UnitDef("beast", 4, 38, 260, 22, 1.7f, 80, 70, MovementClass.Ground, TargetingPolicy.Frontmost, 1.2f, 0, 0f, 0f));
 		return a;
 	}
 }

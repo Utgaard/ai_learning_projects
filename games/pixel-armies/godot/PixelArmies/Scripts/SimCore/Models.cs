@@ -27,9 +27,14 @@ public readonly record struct UnitDef(
 public sealed class ArmyDef
 {
 	public string Name { get; }
+	public string VisualProfileId { get; }
 	public List<UnitDef> Units { get; } = new();
 
-	public ArmyDef(string name) => Name = name;
+	public ArmyDef(string name, string visualProfileId = "default")
+	{
+		Name = name;
+		VisualProfileId = visualProfileId;
+	}
 
 	public float MinCost()
 	{

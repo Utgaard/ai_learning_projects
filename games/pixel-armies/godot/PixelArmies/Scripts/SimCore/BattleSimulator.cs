@@ -31,6 +31,8 @@ public sealed class BattleSimulator
 	public BattleState State { get; }
 	public Spawner LeftSpawner => _leftSpawner;
 	public Spawner RightSpawner => _rightSpawner;
+	public ArmyDef LeftArmy => _leftArmy;
+	public ArmyDef RightArmy => _rightArmy;
 
 	public BattleSimulator(SimConfig cfg, ArmyDef leftArmy, ArmyDef rightArmy, int seed, DebugSettings debugSettings = default)
 	{

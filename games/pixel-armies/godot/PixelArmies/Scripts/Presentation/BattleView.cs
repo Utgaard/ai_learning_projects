@@ -49,6 +49,8 @@ public partial class BattleView : Node2D
 		new StickTier1Profile(),
 		new DefaultRectProfile()
 	};
+	private ArmyVisualProfile _leftVisualProfile = ArmyVisualProfiles.GetProfile("legion");
+	private ArmyVisualProfile _rightVisualProfile = ArmyVisualProfiles.GetProfile("legion");
 
 	public float GroundY { get; private set; } = 120f;
 
@@ -57,6 +59,8 @@ public partial class BattleView : Node2D
 		_sim = sim;
 		_cfg = cfg;
 		GroundY = groundY;
+		_leftVisualProfile = ArmyVisualProfiles.GetProfile(sim.LeftArmy.VisualProfileId);
+		_rightVisualProfile = ArmyVisualProfiles.GetProfile(sim.RightArmy.VisualProfileId);
 	}
 
 	public void Advance(float dt, IReadOnlyList<DamageEvent> damageEvents, IReadOnlyList<UnitDiedEvent> deathEvents)
@@ -149,6 +153,8 @@ public partial class BattleView : Node2D
 			}
 
 			var profile = GetProfile(u.Def);
+			var armyProfile = u.Side == SimSide.Left ? _leftVisualProfile : _rightVisualProfile;
+			var stickStyle = armyProfile.ResolveStickProfile(u.Def.Id);
 			var data = new UnitDrawData(
 				center,
 				w,
@@ -159,7 +165,8 @@ public partial class BattleView : Node2D
 				phase,
 				attackPhase,
 				u.Def.WeaponLength,
-				flashAlpha);
+				flashAlpha,
+				stickStyle);
 			profile.DrawUnit(drawContext, u, data);
 		}
 
@@ -244,7 +251,8 @@ public partial class BattleView : Node2D
 			if (!_lastKnownSides.TryGetValue(ev.UnitId, out var side)) continue;
 
 			var feet = new Vector2(pos.X, pos.Y + visual.Height * 0.5f);
-			var info = new UnitDeathInfo(ev.UnitId, pos, feet, visual, side, def.WeaponLength);
+			var armyProfile = side == SimSide.Left ? _leftVisualProfile : _rightVisualProfile;
+			var info = new UnitDeathInfo(ev.UnitId, pos, feet, visual, side, def.WeaponLength, armyProfile.StickDeathProfile);
 			var profile = GetProfile(def);
 			profile.OnDeath(info);
 		}
