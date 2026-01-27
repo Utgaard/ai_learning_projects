@@ -11,7 +11,7 @@ internal static class DemoArmies
 	{
 		var a = new ArmyDef("Left Basic", "legion");
 		a.Units.Add(new UnitDef("infantry", 1, 6, 20, 6, 2.0f, 14, 90, MovementClass.Ground, TargetingPolicy.Frontmost, 0.75f, 9, 0.6f, 14f));
-		a.Units.Add(new UnitDef("spearman", 2, 12, 100, 9, 2.0f, 55, 80, MovementClass.Ground, TargetingPolicy.Frontmost, 0.9f, 4, 0.8f, 0f));
+		a.Units.Add(new UnitDef("spearman", 2, 12, 100, 9, 2.0f, 60, 80, MovementClass.Ground, TargetingPolicy.Frontmost, 0.9f, 4, 0.8f, 60f));
 		a.Units.Add(new UnitDef("archer", 3, 22, 80, 11, 2.0f, 140, 75, MovementClass.Air, TargetingPolicy.Frontmost, 1.0f, 0, 0f, 0f));
 		a.Units.Add(new UnitDef("ogre", 4, 40, 380, 24, 1.6f, 70, 55, MovementClass.Ground, TargetingPolicy.Frontmost, 1.3f, 0, 0f, 0f));
 		return a;

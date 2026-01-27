@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using Godot;
+using PixelArmies.SimCore;
 
 namespace PixelArmies.Presentation;
 
@@ -22,7 +23,18 @@ public readonly struct StickVisualProfile
 	public readonly float AttackLean;
 	public readonly float WeaponThickness;
 	public readonly float WeaponTipRadius;
-	public readonly Color WeaponColor;
+	public readonly Color WeaponShaftColor;
+	public readonly Color WeaponTipColor;
+	public readonly StickWeaponMotion WeaponMotion;
+	public readonly float ThrustLowerAngle;
+	public readonly float ThrustForwardAngle;
+	public readonly float ThrustExtra;
+	public readonly float CarryAngle;
+	public readonly bool HasShield;
+	public readonly float ShieldRadius;
+	public readonly Vector2 ShieldOffset;
+	public readonly float ShieldOutlineWidth;
+	public readonly Color ShieldOutlineColor;
 
 	public StickVisualProfile(
 		float torsoLen,
@@ -40,7 +52,18 @@ public readonly struct StickVisualProfile
 		float attackLean,
 		float weaponThickness,
 		float weaponTipRadius,
-		Color weaponColor)
+		Color weaponShaftColor,
+		Color weaponTipColor,
+		StickWeaponMotion weaponMotion,
+		float thrustLowerAngle,
+		float thrustForwardAngle,
+		float thrustExtra,
+		float carryAngle,
+		bool hasShield,
+		float shieldRadius,
+		Vector2 shieldOffset,
+		float shieldOutlineWidth,
+		Color shieldOutlineColor)
 	{
 		TorsoLen = torsoLen;
 		LegLen = legLen;
@@ -57,8 +80,25 @@ public readonly struct StickVisualProfile
 		AttackLean = attackLean;
 		WeaponThickness = weaponThickness;
 		WeaponTipRadius = weaponTipRadius;
-		WeaponColor = weaponColor;
+		WeaponShaftColor = weaponShaftColor;
+		WeaponTipColor = weaponTipColor;
+		WeaponMotion = weaponMotion;
+		ThrustLowerAngle = thrustLowerAngle;
+		ThrustForwardAngle = thrustForwardAngle;
+		ThrustExtra = thrustExtra;
+		CarryAngle = carryAngle;
+		HasShield = hasShield;
+		ShieldRadius = shieldRadius;
+		ShieldOffset = shieldOffset;
+		ShieldOutlineWidth = shieldOutlineWidth;
+		ShieldOutlineColor = shieldOutlineColor;
 	}
+}
+
+public enum StickWeaponMotion
+{
+	Swing,
+	Thrust
 }
 
 public readonly struct StickDeathProfile
@@ -153,6 +193,11 @@ public sealed class ArmyVisualProfile
 	{
 		return _stickOverrides.TryGetValue(unitDefId, out var profile) ? profile : StickProfile;
 	}
+
+	public bool UseStickFor(UnitDef def)
+	{
+		return def.Tier == 1 || _stickOverrides.ContainsKey(def.Id);
+	}
 }
 
 public static class ArmyVisualProfiles
@@ -179,7 +224,18 @@ public static class ArmyVisualProfiles
 					attackLean: 1.2f,
 					weaponThickness: 2.2f,
 					weaponTipRadius: 1.6f,
-					weaponColor: new Color(0.35f, 0.22f, 0.10f)),
+					weaponShaftColor: new Color(0.35f, 0.22f, 0.10f),
+					weaponTipColor: new Color(0.35f, 0.22f, 0.10f),
+					weaponMotion: StickWeaponMotion.Swing,
+					thrustLowerAngle: 0.4f,
+					thrustForwardAngle: 0.05f,
+					thrustExtra: 10f,
+					carryAngle: -Mathf.Pi * 0.5f,
+					hasShield: false,
+					shieldRadius: 0f,
+					shieldOffset: Vector2.Zero,
+					shieldOutlineWidth: 0f,
+					shieldOutlineColor: Colors.Transparent),
 				new StickDeathProfile(
 					fallDuration: 0.2f,
 					deathDuration: 0.6f,
@@ -222,7 +278,18 @@ public static class ArmyVisualProfiles
 					attackLean: 1.6f,
 					weaponThickness: 3.0f,
 					weaponTipRadius: 2.1f,
-					weaponColor: new Color(0.28f, 0.16f, 0.08f)),
+					weaponShaftColor: new Color(0.28f, 0.16f, 0.08f),
+					weaponTipColor: new Color(0.28f, 0.16f, 0.08f),
+					weaponMotion: StickWeaponMotion.Swing,
+					thrustLowerAngle: 0.45f,
+					thrustForwardAngle: 0.08f,
+					thrustExtra: 12f,
+					carryAngle: -Mathf.Pi * 0.5f,
+					hasShield: false,
+					shieldRadius: 0f,
+					shieldOffset: Vector2.Zero,
+					shieldOutlineWidth: 0f,
+					shieldOutlineColor: Colors.Transparent),
 				new StickDeathProfile(
 					fallDuration: 0.24f,
 					deathDuration: 0.75f,
@@ -265,7 +332,18 @@ public static class ArmyVisualProfiles
 					attackLean: 1.0f,
 					weaponThickness: 1.8f,
 					weaponTipRadius: 1.4f,
-					weaponColor: new Color(0.4f, 0.26f, 0.12f)),
+					weaponShaftColor: new Color(0.4f, 0.26f, 0.12f),
+					weaponTipColor: new Color(0.4f, 0.26f, 0.12f),
+					weaponMotion: StickWeaponMotion.Swing,
+					thrustLowerAngle: 0.35f,
+					thrustForwardAngle: 0.02f,
+					thrustExtra: 8f,
+					carryAngle: -Mathf.Pi * 0.5f,
+					hasShield: false,
+					shieldRadius: 0f,
+					shieldOffset: Vector2.Zero,
+					shieldOutlineWidth: 0f,
+					shieldOutlineColor: Colors.Transparent),
 				new StickDeathProfile(
 					fallDuration: 0.18f,
 					deathDuration: 0.55f,
@@ -291,6 +369,40 @@ public static class ArmyVisualProfiles
 	};
 
 	private static readonly ArmyVisualProfile DefaultProfile = Profiles["legion"];
+
+	static ArmyVisualProfiles()
+	{
+		var legion = Profiles["legion"];
+		legion.AddStickOverride("spearman",
+			new StickVisualProfile(
+				torsoLen: 18f,
+				legLen: 12f,
+				armLen: 10f,
+				headRadius: 3f,
+				lineWidth: 2.2f,
+				legSwingAmp: 0.35f,
+				bobAmp: 0.9f,
+				armSwingAmp: 0.08f,
+				armForwardAngle: 0.25f,
+				weaponUprightAngle: -Mathf.Pi * 0.5f,
+				attackStartAngle: -0.4f,
+				attackEndAngle: 0.2f,
+				attackLean: 1.4f,
+				weaponThickness: 2.0f,
+				weaponTipRadius: 1.2f,
+				weaponShaftColor: new Color(0.36f, 0.22f, 0.10f),
+				weaponTipColor: new Color(0.75f, 0.78f, 0.82f),
+				weaponMotion: StickWeaponMotion.Thrust,
+				thrustLowerAngle: 0.55f,
+				thrustForwardAngle: 0.05f,
+				thrustExtra: 22f,
+				carryAngle: -1.15f,
+				hasShield: true,
+				shieldRadius: 5.2f,
+				shieldOffset: new Vector2(8f, -6f),
+				shieldOutlineWidth: 1.4f,
+				shieldOutlineColor: new Color(0.08f, 0.08f, 0.08f, 1f)));
+	}
 
 	public static ArmyVisualProfile GetProfile(string? id)
 	{

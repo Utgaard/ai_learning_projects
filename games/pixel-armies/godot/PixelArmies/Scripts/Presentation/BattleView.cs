@@ -152,9 +152,9 @@ public partial class BattleView : Node2D
 				flashAlpha = Mathf.Clamp(flash / FlashDuration, 0f, 1f);
 			}
 
-			var profile = GetProfile(u.Def);
 			var armyProfile = u.Side == SimSide.Left ? _leftVisualProfile : _rightVisualProfile;
 			var stickStyle = armyProfile.ResolveStickProfile(u.Def.Id);
+			var profile = GetProfile(u.Def, armyProfile);
 			var data = new UnitDrawData(
 				center,
 				w,
@@ -253,7 +253,7 @@ public partial class BattleView : Node2D
 			var feet = new Vector2(pos.X, pos.Y + visual.Height * 0.5f);
 			var armyProfile = side == SimSide.Left ? _leftVisualProfile : _rightVisualProfile;
 			var info = new UnitDeathInfo(ev.UnitId, pos, feet, visual, side, def.WeaponLength, armyProfile.StickDeathProfile);
-			var profile = GetProfile(def);
+			var profile = GetProfile(def, armyProfile);
 			profile.OnDeath(info);
 		}
 	}
@@ -274,14 +274,10 @@ public partial class BattleView : Node2D
 		}
 	}
 
-	private IUnitAnimationProfile GetProfile(UnitDef def)
+	private IUnitAnimationProfile GetProfile(UnitDef def, ArmyVisualProfile armyProfile)
 	{
-		for (int i = 0; i < _profiles.Length; i++)
-		{
-			if (_profiles[i].Applies(def)) return _profiles[i];
-		}
-
-		return _profiles[^1];
+		if (armyProfile.UseStickFor(def)) return _profiles[0];
+		return _profiles[1];
 	}
 
 	private void UpdateWalkPhase(UnitState u, float dt)

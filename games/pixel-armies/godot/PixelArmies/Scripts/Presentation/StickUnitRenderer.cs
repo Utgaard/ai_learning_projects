@@ -76,6 +76,7 @@ public static class StickUnitRenderer
 		float weaponLength,
 		StickVisualProfile style)
 	{
+		float weaponLen = weaponLength > 0f ? weaponLength : style.ArmLen;
 		float dir = side == SimSide.Left ? 1f : -1f;
 		float swing = Mathf.Sin(phase + Mathf.Pi * 0.5f) * style.ArmSwingAmp;
 
@@ -90,7 +91,20 @@ public static class StickUnitRenderer
 		Vector2 armDir;
 		Vector2 weaponDir;
 
-		if (attackPhase > 0f)
+		if (style.WeaponMotion == StickWeaponMotion.Thrust)
+		{
+			float t = attackPhase > 0f ? Smoothstep(attackPhase) : 0f;
+			float windupT = Mathf.Clamp(t / 0.4f, 0f, 1f);
+			float thrustT = Mathf.Clamp((t - 0.4f) / 0.6f, 0f, 1f);
+			float armAngle = Mathf.Lerp(style.ArmForwardAngle, style.ThrustLowerAngle, windupT);
+			float weaponAngle = Mathf.Lerp(style.ThrustLowerAngle, style.ThrustForwardAngle, thrustT);
+			float extra = style.ThrustExtra * Smoothstep(thrustT);
+
+			armDir = new Vector2(dir * Mathf.Cos(armAngle + swing), Mathf.Sin(armAngle + swing)).Normalized();
+			weaponDir = new Vector2(dir * Mathf.Cos(weaponAngle), Mathf.Sin(weaponAngle)).Normalized();
+			weaponLen += extra;
+		}
+		else if (attackPhase > 0f)
 		{
 			float finalAngle = swing + attackAngle;
 			armDir = new Vector2(Mathf.Cos(finalAngle) * dir, Mathf.Sin(finalAngle)).Normalized();
@@ -100,17 +114,27 @@ public static class StickUnitRenderer
 		{
 			float armAngle = style.ArmForwardAngle + swing;
 			armDir = new Vector2(dir * Mathf.Cos(armAngle), Mathf.Sin(armAngle)).Normalized();
-			weaponDir = new Vector2(Mathf.Cos(style.WeaponUprightAngle), Mathf.Sin(style.WeaponUprightAngle));
+			weaponDir = new Vector2(dir * Mathf.Cos(style.CarryAngle), Mathf.Sin(style.CarryAngle));
 		}
 
 		var hand = basePos + armDir * style.ArmLen;
 
-		float weaponLen = weaponLength > 0f ? weaponLength : style.ArmLen;
 		var weaponTip = hand + weaponDir * weaponLen;
 
 		canvas.DrawLine(basePos, hand, color, style.LineWidth);
-		canvas.DrawLine(hand, weaponTip, style.WeaponColor, style.WeaponThickness);
-		canvas.DrawCircle(weaponTip, style.WeaponTipRadius, style.WeaponColor);
+		canvas.DrawLine(hand, weaponTip, style.WeaponShaftColor, style.WeaponThickness);
+		canvas.DrawCircle(weaponTip, style.WeaponTipRadius, style.WeaponTipColor);
+
+		if (style.HasShield)
+		{
+			var shieldPos = basePos + new Vector2(dir * style.ShieldOffset.X, style.ShieldOffset.Y);
+			var shieldColor = new Color(color.R * 0.7f, color.G * 0.7f, color.B * 0.7f, 1f);
+			canvas.DrawCircle(shieldPos, style.ShieldRadius, shieldColor);
+			if (style.ShieldOutlineWidth > 0f)
+			{
+				canvas.DrawArc(shieldPos, style.ShieldRadius, 0f, Mathf.Tau, 24, style.ShieldOutlineColor, style.ShieldOutlineWidth);
+			}
+		}
 	}
 
 	private static float Smoothstep(float t)
