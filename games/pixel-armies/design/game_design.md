@@ -218,6 +218,7 @@ Responsibilities:
 - Profiles can be overridden per unit type within an army without changing SimCore.
 - Tier 2 Left Spearman uses a pike thrust animation and shield; reach is driven by WeaponLength.
 - Spearman carry pose: pike angled upward; thrust lowers then stabs forward; pike renders with wood shaft + metal tip.
+- Dev Tool: Unit Viewer mode allows rapid iteration on unit animations without running a full battle.
 
 Rules:
 - Presentation never decides battle outcomes

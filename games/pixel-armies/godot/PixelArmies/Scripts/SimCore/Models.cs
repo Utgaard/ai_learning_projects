@@ -6,6 +6,7 @@ namespace PixelArmies.SimCore;
 public enum Side { Left, Right }
 public enum MovementClass { Ground, Air }
 public enum TargetingPolicy { Frontmost, ClosestInRange, Closest }
+public enum AbilityType { None, Cleave, OnDeathExplode, Stun }
 
 public readonly record struct UnitDef(
 	string Id,
@@ -14,14 +15,17 @@ public readonly record struct UnitDef(
 	float MaxHp,
 	float Damage,
 	float AttackRate,
-	float Range,
+	float Range,         // projectile range; >= 80 = ranged unit
 	float Speed,
 	MovementClass MovementClass = MovementClass.Ground,
 	TargetingPolicy TargetingPolicy = TargetingPolicy.Closest,
 	float FormationSpacingMul = 1f,
 	int VanguardDepth = 0,
 	float VanguardSpacingMul = 0f,
-	float WeaponLength = 0f
+	float WeaponLength = 0f,     // extra melee reach; does not make unit "ranged"
+	float AttackDuration = 0f,
+	AbilityType Ability = AbilityType.None,
+	float AbilityParam = 0f      // Cleave: splash radius
 );
 
 public sealed class ArmyDef
@@ -29,6 +33,9 @@ public sealed class ArmyDef
 	public string Name { get; }
 	public string VisualProfileId { get; }
 	public List<UnitDef> Units { get; } = new();
+
+	// Per-army tier spawn weights [T1, T2, T3, T4]. Null = use global defaults.
+	public float[]? TierWeights;
 
 	public ArmyDef(string name, string visualProfileId = "default")
 	{
@@ -66,3 +73,13 @@ public sealed class UnitState
 		AttackCooldown = 0f;
 	}
 }
+
+public readonly record struct MatchRecord(
+	string LeftArmy,
+	string RightArmy,
+	string Winner,
+	float BattleTime,
+	int LeftKills,
+	int RightKills,
+	bool Stomp
+);

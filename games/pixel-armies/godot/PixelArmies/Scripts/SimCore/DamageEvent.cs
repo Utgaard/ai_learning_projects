@@ -6,5 +6,6 @@ public readonly record struct DamageEvent(
 	int AttackerId,
 	int TargetId,
 	float Damage,
-	bool IsRanged
+	bool IsRanged,
+	bool IsAoe = false
 );

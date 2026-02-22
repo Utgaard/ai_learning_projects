@@ -152,12 +152,20 @@ public sealed class BattleSimulator
 					float applied = wasAlive ? MathF.Min(dmg, target.Hp) : 0f;
 					target!.Hp -= dmg;
 					RecordDamage(u.Side, applied);
-					_damageEvents.Add(new DamageEvent(u.Id, target.Id, dmg, IsRanged(u.Def)));
-					if (wasAlive && target.Hp <= 0f)
-					{
-						RecordKill(u.Side);
-						_unitDiedEvents.Add(new UnitDiedEvent(target.Id, u.Id));
-					}
+			_damageEvents.Add(new DamageEvent(u.Id, target.Id, dmg, IsRanged(u.Def)));
+				if (wasAlive && target.Hp <= 0f)
+				{
+					RecordKill(u.Side);
+					_unitDiedEvents.Add(new UnitDiedEvent(target.Id, u.Id));
+					if (target.Def.Ability == AbilityType.OnDeathExplode)
+						ApplyDeathExplode(target, u, units);
+				}
+
+				if (u.Def.Ability == AbilityType.Cleave)
+					ApplyCleave(u, target, units, u.Def.AbilityParam);
+				if (u.Def.Ability == AbilityType.Stun && wasAlive && target.Hp > 0f)
+					target.AttackCooldown = AttackCooldownFor(target.Def);
+
 					u.AttackCooldown = AttackCooldownFor(u.Def);
 				}
 				continue;
@@ -333,6 +341,7 @@ public sealed class BattleSimulator
 			var e = units[i];
 			if (!e.Alive) continue;
 			if (e.Side == attacker.Side) continue;
+			if (!CanTarget(attacker.Def, e.Def)) continue;
 
 			float cmp = left ? e.X : -e.X;
 			float best = target == null ? float.MaxValue : (left ? target.X : -target.X);
@@ -358,6 +367,7 @@ public sealed class BattleSimulator
 			var e = units[i];
 			if (!e.Alive) continue;
 			if (e.Side == attacker.Side) continue;
+			if (!CanTarget(attacker.Def, e.Def)) continue;
 
 			float d = Math.Abs(e.X - attacker.X);
 			if (inRangeOnly && d > range) continue;
@@ -386,6 +396,7 @@ public sealed class BattleSimulator
 			var e = units[i];
 			if (!e.Alive) continue;
 			if (e.Side == u.Side) continue;
+			if (!CanTarget(u.Def, e.Def)) continue;
 
 			float dist = Math.Abs(e.X - u.X);
 			float contactDist = selfRadius + UnitSpacingRadius(e, spacingMulByUnitId);
@@ -527,11 +538,20 @@ public sealed class BattleSimulator
 
 	private static float NormalizeSpacingMul(float mul) => mul > 0f ? mul : 1f;
 
-	private static bool IsRanged(UnitDef attacker) => EffectiveRange(attacker) >= RangedMinRange;
+	// A unit is ranged when it has a projectile (Range >= threshold); WeaponLength is melee reach only.
+	private static bool IsRanged(UnitDef attacker) => attacker.Range >= RangedMinRange;
 
-	private static float EffectiveRange(UnitDef def)
+	// Effective attack reach = max of melee weapon length and projectile range.
+	private static float EffectiveRange(UnitDef def) => Math.Max(def.WeaponLength, def.Range);
+
+	// Ground melee units (not ranged, not flying) cannot reach air targets.
+	private static bool CanTarget(UnitDef attacker, UnitDef target)
 	{
-		return def.WeaponLength > 0f ? def.WeaponLength : def.Range;
+		if (target.MovementClass == MovementClass.Air &&
+		    attacker.MovementClass == MovementClass.Ground &&
+		    !IsRanged(attacker))
+			return false;
+		return true;
 	}
 	private static float AttackCooldownFor(UnitDef attacker)
 	{
@@ -576,6 +596,58 @@ public sealed class BattleSimulator
 		var right = _rightSpawner.ConsumeUnitSpawnedEvents();
 		if (right.Count > 0) _unitSpawnedEvents.AddRange(right);
 		return _unitSpawnedEvents;
+	}
+
+	private void ApplyCleave(UnitState attacker, UnitState primaryTarget, List<UnitState> units, float radius)
+	{
+		const float SplashMultiplier = 0.5f;
+		float splashDmg = attacker.Def.Damage * SplashMultiplier;
+
+		for (int i = 0; i < units.Count; i++)
+		{
+			var e = units[i];
+			if (!e.Alive) continue;
+			if (e.Side == attacker.Side) continue;
+			if (e.Id == primaryTarget.Id) continue;
+			if (Math.Abs(e.X - primaryTarget.X) > radius) continue;
+
+			bool wasAlive = e.Hp > 0f;
+			float applied = wasAlive ? MathF.Min(splashDmg, e.Hp) : 0f;
+			e.Hp -= splashDmg;
+			RecordDamage(attacker.Side, applied);
+			_damageEvents.Add(new DamageEvent(attacker.Id, e.Id, splashDmg, false, IsAoe: true));
+			if (wasAlive && e.Hp <= 0f)
+			{
+				RecordKill(attacker.Side);
+				_unitDiedEvents.Add(new UnitDiedEvent(e.Id, attacker.Id));
+			}
+		}
+	}
+
+	private void ApplyDeathExplode(UnitState dying, UnitState killer, List<UnitState> units)
+	{
+		const float DamageMultiplier = 0.75f;
+		float radius = dying.Def.AbilityParam;
+		float blastDmg = dying.Def.MaxHp * DamageMultiplier;
+
+		for (int i = 0; i < units.Count; i++)
+		{
+			var e = units[i];
+			if (!e.Alive) continue;
+			if (e.Side == dying.Side) continue;
+			if (Math.Abs(e.X - dying.X) > radius) continue;
+
+			bool wasAlive = e.Hp > 0f;
+			float applied = wasAlive ? MathF.Min(blastDmg, e.Hp) : 0f;
+			e.Hp -= blastDmg;
+			RecordDamage(dying.Side, applied);
+			_damageEvents.Add(new DamageEvent(dying.Id, e.Id, blastDmg, false, IsAoe: true));
+			if (wasAlive && e.Hp <= 0f)
+			{
+				RecordKill(dying.Side);
+				_unitDiedEvents.Add(new UnitDiedEvent(e.Id, dying.Id));
+			}
+		}
 	}
 
 	private void EnforceAirSpacing(List<UnitState> airUnits, Dictionary<int, float> spacingMulByUnitId)

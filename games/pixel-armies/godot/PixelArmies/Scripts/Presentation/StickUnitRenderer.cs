@@ -93,16 +93,51 @@ public static class StickUnitRenderer
 
 		if (style.WeaponMotion == StickWeaponMotion.Thrust)
 		{
-			float t = attackPhase > 0f ? Smoothstep(attackPhase) : 0f;
-			float windupT = Mathf.Clamp(t / 0.4f, 0f, 1f);
-			float thrustT = Mathf.Clamp((t - 0.4f) / 0.6f, 0f, 1f);
-			float armAngle = Mathf.Lerp(style.ArmForwardAngle, style.ThrustLowerAngle, windupT);
-			float weaponAngle = Mathf.Lerp(style.ThrustLowerAngle, style.ThrustForwardAngle, thrustT);
-			float extra = style.ThrustExtra * Smoothstep(thrustT);
+			if (attackPhase > 0f)
+			{
+				float t = Smoothstep(attackPhase);
+				float spearAngle;
+				float extend = 0f;
 
-			armDir = new Vector2(dir * Mathf.Cos(armAngle + swing), Mathf.Sin(armAngle + swing)).Normalized();
-			weaponDir = new Vector2(dir * Mathf.Cos(weaponAngle), Mathf.Sin(weaponAngle)).Normalized();
-			weaponLen += extra;
+				// Spear-driven phases: rotate down -> thrust -> retract -> rotate up
+				if (t < 0.25f)
+				{
+					float subT = Mathf.Clamp(t / 0.25f, 0f, 1f);
+					spearAngle = Mathf.Lerp(style.CarryAngle, style.ThrustLowerAngle, subT);
+				}
+				else if (t < 0.55f)
+				{
+					float subT = Mathf.Clamp((t - 0.25f) / 0.3f, 0f, 1f);
+					spearAngle = Mathf.Lerp(style.ThrustLowerAngle, style.ThrustForwardAngle, subT);
+					extend = style.ThrustExtra * Smoothstep(subT);
+				}
+				else if (t < 0.75f)
+				{
+					float subT = Mathf.Clamp((t - 0.55f) / 0.2f, 0f, 1f);
+					spearAngle = style.ThrustForwardAngle;
+					extend = style.ThrustExtra * (1f - subT);
+				}
+				else
+				{
+					float subT = Mathf.Clamp((t - 0.75f) / 0.25f, 0f, 1f);
+					spearAngle = Mathf.Lerp(style.ThrustForwardAngle, style.CarryAngle, subT);
+				}
+
+				weaponDir = new Vector2(dir * Mathf.Cos(spearAngle), Mathf.Sin(spearAngle)).Normalized();
+				weaponLen += extend;
+
+				// Arm follows spear base (hand anchored to spear axis).
+				float armAngle = Mathf.Lerp(style.ArmForwardAngle, spearAngle, 0.6f);
+				armDir = new Vector2(dir * Mathf.Cos(armAngle), Mathf.Sin(armAngle)).Normalized();
+			}
+			else
+			{
+				float sway = swing * 0.15f;
+				float armAngle = style.ArmForwardAngle + sway;
+				float carryAngle = style.CarryAngle + sway;
+				armDir = new Vector2(dir * Mathf.Cos(armAngle), Mathf.Sin(armAngle)).Normalized();
+				weaponDir = new Vector2(dir * Mathf.Cos(carryAngle), Mathf.Sin(carryAngle));
+			}
 		}
 		else if (attackPhase > 0f)
 		{
@@ -129,10 +164,26 @@ public static class StickUnitRenderer
 		{
 			var shieldPos = basePos + new Vector2(dir * style.ShieldOffset.X, style.ShieldOffset.Y);
 			var shieldColor = new Color(color.R * 0.7f, color.G * 0.7f, color.B * 0.7f, 1f);
-			canvas.DrawCircle(shieldPos, style.ShieldRadius, shieldColor);
-			if (style.ShieldOutlineWidth > 0f)
+			if (style.ShieldWidth > 0f && style.ShieldHeight > 0f)
 			{
-				canvas.DrawArc(shieldPos, style.ShieldRadius, 0f, Mathf.Tau, 24, style.ShieldOutlineColor, style.ShieldOutlineWidth);
+				var rect = new Rect2(
+					shieldPos.X - style.ShieldWidth * 0.5f,
+					shieldPos.Y - style.ShieldHeight * 0.5f,
+					style.ShieldWidth,
+					style.ShieldHeight);
+				canvas.DrawRect(rect, shieldColor);
+				if (style.ShieldOutlineWidth > 0f)
+				{
+					canvas.DrawRect(rect, style.ShieldOutlineColor, false, style.ShieldOutlineWidth);
+				}
+			}
+			else
+			{
+				canvas.DrawCircle(shieldPos, style.ShieldRadius, shieldColor);
+				if (style.ShieldOutlineWidth > 0f)
+				{
+					canvas.DrawArc(shieldPos, style.ShieldRadius, 0f, Mathf.Tau, 24, style.ShieldOutlineColor, style.ShieldOutlineWidth);
+				}
 			}
 		}
 	}

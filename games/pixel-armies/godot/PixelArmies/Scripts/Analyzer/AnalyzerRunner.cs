@@ -21,14 +21,18 @@ public static class AnalyzerRunner
 		int seed = 42;
 		float maxSeconds = 240f;
 		int progressInterval = 0;
+		string leftName  = "";
+		string rightName = "";
 
 		foreach (var a in args)
 		{
 			if (a == "analyze") analyze = true;
-			else if (a.StartsWith("--runs=") && int.TryParse(a["--runs=".Length..], out var r)) runs = r;
-			else if (a.StartsWith("--seed=") && int.TryParse(a["--seed=".Length..], out var s)) seed = s;
+			else if (a.StartsWith("--runs=")        && int.TryParse(a["--runs=".Length..],        out var r)) runs = r;
+			else if (a.StartsWith("--seed=")        && int.TryParse(a["--seed=".Length..],        out var s)) seed = s;
 			else if (a.StartsWith("--max-seconds=") && float.TryParse(a["--max-seconds=".Length..], out var m)) maxSeconds = m;
-			else if (a.StartsWith("--progress=") && int.TryParse(a["--progress=".Length..], out var p)) progressInterval = p;
+			else if (a.StartsWith("--progress=")    && int.TryParse(a["--progress=".Length..],    out var p)) progressInterval = p;
+			else if (a.StartsWith("--left="))  leftName  = a["--left=".Length..];
+			else if (a.StartsWith("--right=")) rightName = a["--right=".Length..];
 		}
 
 		if (!analyze) return false;
@@ -48,8 +52,10 @@ public static class AnalyzerRunner
 		var stopwatch = Stopwatch.StartNew();
 
 		var cfg = new SimConfig();
-		var left = DemoArmies.LeftBasic();
-		var right = DemoArmies.RightBasic();
+		var allArmies = DemoArmies.All();
+		var left  = FindArmy(allArmies, leftName)  ?? DemoArmies.LeftBasic();
+		var right = FindArmy(allArmies, rightName) ?? DemoArmies.RightBasic();
+		GD.Print($"Matchup: {left.Name} vs {right.Name}");
 
 		var stats = SimCore.Analyzer.RunMany(
 			cfg,
@@ -70,5 +76,16 @@ public static class AnalyzerRunner
 
 		GD.Print(stats.ToString());
 		return true;
+	}
+
+	private static ArmyDef? FindArmy(IReadOnlyList<ArmyDef> armies, string name)
+	{
+		if (string.IsNullOrEmpty(name)) return null;
+		for (int i = 0; i < armies.Count; i++)
+		{
+			if (armies[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+				return armies[i];
+		}
+		return null;
 	}
 }

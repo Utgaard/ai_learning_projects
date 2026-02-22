@@ -1,39 +1,104 @@
 #nullable enable
 
+using System.Collections.Generic;
 using PixelArmies.SimCore;
 
 namespace PixelArmies.Content;
 
-// Demo armies (same as before, positional args to avoid name issues)
 internal static class DemoArmies
 {
+	public static IReadOnlyList<ArmyDef> All() => new[]
+	{
+		LeftBasic(),
+		RightBasic(),
+		Skirmishers(),
+	};
+
 	public static ArmyDef LeftBasic()
 	{
-		var a = new ArmyDef("Left Basic", "legion");
-		a.Units.Add(new UnitDef("infantry", 1, 6, 20, 6, 2.0f, 14, 90, MovementClass.Ground, TargetingPolicy.Frontmost, 0.75f, 9, 0.6f, 14f));
-		a.Units.Add(new UnitDef("spearman", 2, 12, 100, 9, 2.0f, 60, 80, MovementClass.Ground, TargetingPolicy.Frontmost, 0.9f, 4, 0.8f, 60f));
-		a.Units.Add(new UnitDef("archer", 3, 22, 80, 11, 2.0f, 140, 75, MovementClass.Air, TargetingPolicy.Frontmost, 1.0f, 0, 0f, 0f));
-		a.Units.Add(new UnitDef("ogre", 4, 40, 380, 24, 1.6f, 70, 55, MovementClass.Ground, TargetingPolicy.Frontmost, 1.3f, 0, 0f, 0f));
+		// Balanced escalation, slightly favors lower tiers
+		var a = new ArmyDef("Legion", "legion") { TierWeights = new[] { 5f, 4f, 2.5f, 1f } };
+		a.Units.Add(new UnitDef(
+			Id: "infantry", Tier: 1, Cost: 6, MaxHp: 20, Damage: 6,
+			AttackRate: 2.0f, Range: 14, Speed: 90,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.Frontmost,
+			FormationSpacingMul: 0.75f, VanguardDepth: 9, VanguardSpacingMul: 0.6f,
+			WeaponLength: 14f, AttackDuration: 0.22f));
+		a.Units.Add(new UnitDef(
+			Id: "spearman", Tier: 2, Cost: 12, MaxHp: 100, Damage: 9,
+			AttackRate: 2.0f, Range: 60, Speed: 80,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.Frontmost,
+			FormationSpacingMul: 0.9f, VanguardDepth: 4, VanguardSpacingMul: 0.8f,
+			WeaponLength: 60f, AttackDuration: 1.0f));
+		a.Units.Add(new UnitDef(
+			Id: "archer", Tier: 3, Cost: 22, MaxHp: 80, Damage: 11,
+			AttackRate: 2.0f, Range: 140, Speed: 75,
+			MovementClass: MovementClass.Air, TargetingPolicy: TargetingPolicy.Frontmost,
+			FormationSpacingMul: 1.0f, AttackDuration: 0.22f));
+		a.Units.Add(new UnitDef(
+			Id: "ogre", Tier: 4, Cost: 40, MaxHp: 380, Damage: 24,
+			AttackRate: 1.6f, Range: 70, Speed: 55,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.Frontmost,
+			FormationSpacingMul: 1.3f, AttackDuration: 0.22f,
+			Ability: AbilityType.Cleave, AbilityParam: 50f));
 		return a;
 	}
 
 	public static ArmyDef RightBasic()
 	{
-		var a = new ArmyDef("Right Basic", "brutes");
-		a.Units.Add(new UnitDef("raider", 1, 6, 15, 6.5f, 2.0f, 14, 95, MovementClass.Ground, TargetingPolicy.Frontmost, 0.9f, 0, 0f, 14f));
-		a.Units.Add(new UnitDef("brute", 2, 13, 130, 7.5f, 2.0f, 55, 70, MovementClass.Ground, TargetingPolicy.Frontmost, 1.05f, 0, 0f, 0f));
-		a.Units.Add(new UnitDef("caster", 3, 24, 70, 14, 2.0f, 150, 70, MovementClass.Ground, TargetingPolicy.ClosestInRange, 1.15f, 0, 0f, 0f));
-		a.Units.Add(new UnitDef("dragon", 4, 45, 260, 30, 1.5f, 110, 80, MovementClass.Air, TargetingPolicy.Frontmost, 1.45f, 0, 0f, 0f));
+		// Elite army: fewer T1, ramps toward heavy units faster
+		var a = new ArmyDef("Brutes", "brutes") { TierWeights = new[] { 3f, 5f, 4f, 3f } };
+		a.Units.Add(new UnitDef(
+			Id: "raider", Tier: 1, Cost: 6, MaxHp: 15, Damage: 6.5f,
+			AttackRate: 2.0f, Range: 14, Speed: 95,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.Frontmost,
+			FormationSpacingMul: 0.9f, WeaponLength: 14f, AttackDuration: 0.22f));
+		a.Units.Add(new UnitDef(
+			Id: "brute", Tier: 2, Cost: 13, MaxHp: 130, Damage: 7.5f,
+			AttackRate: 2.0f, Range: 55, Speed: 70,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.Frontmost,
+			FormationSpacingMul: 1.05f, AttackDuration: 0.22f,
+			Ability: AbilityType.Stun));
+		a.Units.Add(new UnitDef(
+			Id: "caster", Tier: 3, Cost: 24, MaxHp: 70, Damage: 14,
+			AttackRate: 2.0f, Range: 150, Speed: 70,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.ClosestInRange,
+			FormationSpacingMul: 1.15f, AttackDuration: 0.22f,
+			Ability: AbilityType.OnDeathExplode, AbilityParam: 80f));
+		a.Units.Add(new UnitDef(
+			Id: "dragon", Tier: 4, Cost: 45, MaxHp: 260, Damage: 30,
+			AttackRate: 1.5f, Range: 110, Speed: 80,
+			MovementClass: MovementClass.Air, TargetingPolicy: TargetingPolicy.Frontmost,
+			FormationSpacingMul: 1.45f, AttackDuration: 0.22f,
+			Ability: AbilityType.Cleave, AbilityParam: 60f));
 		return a;
 	}
 
 	public static ArmyDef Skirmishers()
 	{
-		var a = new ArmyDef("Skirmishers", "skirmishers");
-		a.Units.Add(new UnitDef("runner", 1, 6, 16, 5.5f, 2.2f, 14, 105, MovementClass.Ground, TargetingPolicy.Closest, 0.7f, 0, 0f, 14f));
-		a.Units.Add(new UnitDef("piker", 2, 12, 95, 8, 2.0f, 55, 85, MovementClass.Ground, TargetingPolicy.Frontmost, 0.85f, 0, 0f, 0f));
-		a.Units.Add(new UnitDef("slinger", 3, 20, 70, 10, 2.1f, 120, 80, MovementClass.Ground, TargetingPolicy.ClosestInRange, 1.0f, 0, 0f, 0f));
-		a.Units.Add(new UnitDef("beast", 4, 38, 260, 22, 1.7f, 80, 70, MovementClass.Ground, TargetingPolicy.Frontmost, 1.2f, 0, 0f, 0f));
+		// Swarm army: heavy T1 bias, but saves up for big T4 hits
+		var a = new ArmyDef("Skirmishers", "skirmishers") { TierWeights = new[] { 9f, 3f, 2f, 1.5f } };
+		a.Units.Add(new UnitDef(
+			Id: "runner", Tier: 1, Cost: 6, MaxHp: 16, Damage: 5.5f,
+			AttackRate: 2.2f, Range: 14, Speed: 105,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.Closest,
+			FormationSpacingMul: 0.7f, WeaponLength: 14f, AttackDuration: 0.22f));
+		a.Units.Add(new UnitDef(
+			Id: "piker", Tier: 2, Cost: 12, MaxHp: 95, Damage: 8,
+			AttackRate: 2.0f, Range: 55, Speed: 85,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.Frontmost,
+			FormationSpacingMul: 0.85f, AttackDuration: 0.22f));
+		a.Units.Add(new UnitDef(
+			Id: "slinger", Tier: 3, Cost: 20, MaxHp: 70, Damage: 10,
+			AttackRate: 2.1f, Range: 120, Speed: 80,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.ClosestInRange,
+			FormationSpacingMul: 1.0f, AttackDuration: 0.22f));
+		a.Units.Add(new UnitDef(
+			Id: "beast", Tier: 4, Cost: 38, MaxHp: 260, Damage: 22,
+			AttackRate: 1.7f, Range: 80, Speed: 70,
+			MovementClass: MovementClass.Ground, TargetingPolicy: TargetingPolicy.Frontmost,
+			FormationSpacingMul: 1.2f, AttackDuration: 0.22f,
+			Ability: AbilityType.Cleave, AbilityParam: 45f));
 		return a;
 	}
 }

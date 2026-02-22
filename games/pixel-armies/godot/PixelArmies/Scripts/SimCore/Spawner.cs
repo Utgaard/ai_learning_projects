@@ -104,16 +104,12 @@ public sealed class Spawner
 		return events;
 	}
 
-	private static float TierWeight(int tier)
+	private float TierWeight(int tier)
 	{
-		return tier switch
-		{
-			1 => 6f,
-			2 => 4f,
-			3 => 2f,
-			4 => 1f,
-			_ => 1f
-		};
+		var weights = _army.TierWeights;
+		if (weights != null && tier >= 1 && tier <= weights.Length)
+			return weights[tier - 1];
+		return tier switch { 1 => 6f, 2 => 4f, 3 => 2f, 4 => 1f, _ => 1f };
 	}
 
 	private int PickTier(int unlockedTier)
