@@ -4,4 +4,4 @@ Products and applications for Vardark.
 
 ## Apps
 
-_Apps will be added as separate subdirectories here._
+- **[DreamLives](dreamlives/)** — AI-powered simulator for infinite different lives, worlds, and destinies
